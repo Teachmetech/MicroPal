@@ -1,0 +1,352 @@
+{
+  "name": "micropal",
+  "displayName": "MicroPal",
+  "description": "MicroPython development and firmware flashing for ESP32 with deliberate serial ownership and reset-aware reconnection.",
+  "version": "0.2.1",
+  "publisher": "micropal-local",
+  "icon": "media/icon.png",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "esp32",
+    "esp32-s3",
+    "micropython",
+    "mpremote"
+  ],
+  "extensionKind": [
+    "ui"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onFileSystem:micropal"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Device commands execute local tools and Python code on hardware."
+    },
+    "virtualWorkspaces": {
+      "supported": false,
+      "description": "Uploads and local serial tools require files on this computer."
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm run lint && npm test && npm run build",
+    "vscode:prepublish": "npm run build",
+    "package": "vsce package --no-dependencies --allow-missing-repository --no-rewrite-relative-links --out micropal-0.2.1.vsix",
+    "test:host": "npm run build && node scripts/test-host.mjs",
+    "test:tools": "node scripts/test-tools.mjs",
+    "test:filesystem:host": "node scripts/test-filesystem-host.mjs",
+    "test:port-release": "node scripts/test-port-release.mjs"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "microPal.setupTools",
+        "title": "Set Up Tools",
+        "category": "MicroPal"
+      },
+      {
+        "command": "microPal.repairTools",
+        "title": "Repair Tools",
+        "category": "MicroPal"
+      },
+      {
+        "command": "microPal.connect",
+        "title": "Connect",
+        "category": "MicroPal",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "microPal.openDeviceFiles",
+        "title": "Open ESP32 Files in Explorer",
+        "category": "MicroPal",
+        "icon": "$(files)"
+      },
+      {
+        "command": "microPal.closeDeviceFiles",
+        "title": "Close ESP32 Files",
+        "category": "MicroPal",
+        "icon": "$(close)"
+      },
+      {
+        "command": "microPal.flashFirmware",
+        "title": "Flash Firmware",
+        "category": "MicroPal",
+        "icon": "$(flame)"
+      },
+      {
+        "command": "microPal.disconnect",
+        "title": "Disconnect",
+        "category": "MicroPal",
+        "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "microPal.runFile",
+        "title": "Run Current File",
+        "category": "MicroPal",
+        "icon": "$(play)"
+      },
+      {
+        "command": "microPal.uploadFilesToDevice",
+        "title": "Upload Files to ESP32\u2026",
+        "category": "MicroPal",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "microPal.uploadFolderToDevice",
+        "title": "Upload Folder to ESP32\u2026",
+        "category": "MicroPal",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "microPal.uploadFile",
+        "title": "Upload Current File",
+        "category": "MicroPal",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "microPal.syncProject",
+        "title": "Sync Project to Device",
+        "category": "MicroPal",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "microPal.stop",
+        "title": "Stop Execution",
+        "category": "MicroPal",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "microPal.softReset",
+        "title": "Soft Reset",
+        "category": "MicroPal",
+        "icon": "$(debug-restart)"
+      },
+      {
+        "command": "microPal.openRepl",
+        "title": "Open REPL",
+        "category": "MicroPal",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "microPal.refreshFiles",
+        "title": "Refresh Device Files",
+        "category": "MicroPal",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "microPal.openDeviceFile",
+        "title": "Open Device File",
+        "category": "MicroPal"
+      },
+      {
+        "command": "microPal.downloadFile",
+        "title": "Download from ESP32\u2026",
+        "category": "MicroPal",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "microPal.showOutput",
+        "title": "Show Output",
+        "category": "MicroPal"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "microPal",
+          "title": "MicroPal",
+          "icon": "media/board.svg"
+        }
+      ]
+    },
+    "views": {
+      "microPal": [
+        {
+          "id": "microPal.files",
+          "name": "Device Files"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "microPal.files",
+        "contents": "First time using MicroPal? [Set Up Tools](command:microPal.setupTools) with Python 3.10+ installed.\nConnect an ESP32 running MicroPython to browse its files.\n[Connect](command:microPal.connect)\nInstall MicroPython on a new board with [Flash Firmware](command:microPal.flashFirmware).\nHaving tool problems? [Repair Tools](command:microPal.repairTools).",
+        "when": "!microPal.connected"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "microPal.flashFirmware",
+          "when": "view == microPal.files",
+          "group": "navigation@4"
+        },
+        {
+          "command": "microPal.connect",
+          "when": "view == microPal.files",
+          "group": "navigation@1"
+        },
+        {
+          "command": "microPal.refreshFiles",
+          "when": "view == microPal.files && microPal.connected",
+          "group": "navigation@2"
+        },
+        {
+          "command": "microPal.openRepl",
+          "when": "view == microPal.files && microPal.connected",
+          "group": "navigation@3"
+        },
+        {
+          "command": "microPal.openDeviceFiles",
+          "when": "view == microPal.files && microPal.connected",
+          "group": "navigation@0"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "microPal.downloadFile",
+          "when": "view == microPal.files && viewItem == deviceFile",
+          "group": "inline"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "microPal.runFile",
+          "when": "resourceScheme == file && resourceLangId == python && microPal.connected",
+          "group": "navigation@10"
+        },
+        {
+          "command": "microPal.uploadFile",
+          "when": "resourceScheme == file && microPal.connected",
+          "group": "navigation@11"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "microPal.openDeviceFile",
+          "when": "false"
+        },
+        {
+          "command": "microPal.downloadFile",
+          "when": "false"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "microPal.uploadFilesToDevice",
+          "when": "resourceScheme == micropal && explorerResourceIsFolder",
+          "group": "microPal@1"
+        },
+        {
+          "command": "microPal.uploadFolderToDevice",
+          "when": "resourceScheme == micropal && explorerResourceIsFolder",
+          "group": "microPal@2"
+        },
+        {
+          "command": "microPal.downloadFile",
+          "when": "resourceScheme == micropal && !explorerResourceIsRoot",
+          "group": "microPal@3"
+        },
+        {
+          "command": "microPal.refreshFiles",
+          "when": "resourceScheme == micropal && explorerResourceIsFolder",
+          "group": "microPal@4"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "MicroPal",
+      "properties": {
+        "microPal.pythonPath": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "description": "Optional Python 3.10+ executable for managed setup. Leave empty to detect Python automatically. Select an executable path, not a shell command. Python must include venv and ensurepip."
+        },
+        "microPal.esptoolPath": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "description": "Optional custom esptool 5.x executable. Leave empty to use MicroPal's managed tools. A nonempty path overrides the managed installation; use an executable, not a shell command."
+        },
+        "microPal.mpremotePath": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "description": "Optional custom mpremote executable. Leave empty to use MicroPal's managed tools. A nonempty path overrides the managed installation; use an executable, not a shell command."
+        },
+        "microPal.preferredPort": {
+          "type": "string",
+          "default": "",
+          "description": "Preferred serial port path, COM name, or id:USB_SERIAL_NUMBER. Empty prompts for a device."
+        },
+        "microPal.baudRate": {
+          "type": "number",
+          "default": 115200,
+          "minimum": 1200,
+          "maximum": 4000000,
+          "description": "Serial baud rate. The mpremote CLI supports only 115200 in V1; other values are rejected. Native USB CDC may ignore this value."
+        },
+        "microPal.autoReconnect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Rediscover the selected device after a disconnect or reset. Never reruns user code."
+        },
+        "microPal.autoReleasePort": {
+          "type": "boolean",
+          "default": true,
+          "scope": "machine",
+          "description": "On macOS/Linux, Connect automatically stops MicroPal-managed REPL processes holding the selected port. Other applications always require confirmation; force termination requires a separate confirmation."
+        },
+        "microPal.syncExclusions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/.git/**",
+            "**/.vscode/**",
+            "**/.venv/**",
+            "**/venv/**",
+            "**/__pycache__/**",
+            "**/node_modules/**",
+            "**/.DS_Store",
+            "**/.env",
+            "**/.env.*",
+            "**/*.pyc",
+            "**/*.vsix"
+          ],
+          "description": "Glob patterns relative to the selected project root, excluded from project sync. Symlinks are always skipped."
+        }
+      }
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "@types/vscode": "1.95.0",
+    "@vscode/vsce": "^3.6.0",
+    "esbuild": "^0.25.11",
+    "eslint": "^10.11.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^4.1.11"
+  },
+  "dependencies": {
+    "minimatch": "^10.0.3"
+  }
+}
