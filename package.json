@@ -2,7 +2,7 @@
   "name": "micropal",
   "displayName": "MicroPal",
   "description": "MicroPython development and firmware flashing for ESP32 with deliberate serial ownership and reset-aware reconnection.",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "publisher": "teachmetech",
   "repository": {
     "type": "git",

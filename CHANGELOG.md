@@ -4,6 +4,25 @@ All changes intended for public delivery are recorded here. Release automation p
 
 ## [Unreleased]
 
+## 0.3.0 (2026-10-10)
+
+## [0.3.0](https://github.com/Teachmetech/MicroPal/compare/v0.2.1...v0.3.0) (2026-10-10)
+
+### Features
+
+* **release:** prepare public MicroPal distribution ([6a3855a](https://github.com/Teachmetech/MicroPal/commit/6a3855a06a7782038820732e0740b245f9f7c1c7))
+
+### Fixes
+
+* **ci:** repair clean installs and document publisher setup ([035b259](https://github.com/Teachmetech/MicroPal/commit/035b25997283e14e1bcb46948744fee344cbf3ab))
+
+### Tests
+
+* **ci:** make binary and path fixtures portable ([dce6c89](https://github.com/Teachmetech/MicroPal/commit/dce6c89695aaa1f14f48585779995958e4533add))
+
+
+### Maintainer notes
+
 ### Added
 
 - Created the public `Teachmetech/MicroPal` GitHub repository with MIT licensing, private vulnerability reporting, contribution guidance, and issue/pull-request templates.
