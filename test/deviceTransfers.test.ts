@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import path from 'node:path';
 import * as vscode from 'vscode';
 
 const api = vi.hoisted(() => {
@@ -109,7 +110,7 @@ describe('explicit Explorer transfers', () => {
     const { downloadFromDevice } = await import('../src/ui/deviceTransfers');
     api.window.showSaveDialog.mockResolvedValue(local('/downloads/main.py'));
     await downloadFromDevice(remote('/main.py'), '/local project');
-    expect(api.window.showSaveDialog).toHaveBeenCalledWith(expect.objectContaining({ defaultUri: local('/local project/main.py') }));
+    expect(api.window.showSaveDialog).toHaveBeenCalledWith(expect.objectContaining({ defaultUri: local(path.join('/local project', 'main.py')) }));
     expect(api.workspace.fs.copy).toHaveBeenCalledWith(remote('/main.py'), local('/downloads/main.py'), { overwrite: false });
     expect([...api.entries.get(local('/downloads/main.py').toString())!.data]).toEqual([1, 2, 3]);
   });

@@ -41,7 +41,8 @@ function executeCode(spec: CommandSpec, root: string): string {
   const index = spec.args.indexOf('exec');
   expect(index).toBeGreaterThan(-1);
   // Keep device paths POSIX while mapping them to real host fixtures on every OS.
-  const harness = `import os, builtins\n_root = ${JSON.stringify(root)}\ndef _map(p):\n return os.path.join(_root, *p[len('/device/'):].split('/')) if p.startswith('/device/') else (_root if p == '/device' else p)\nfor _name in ['listdir', 'stat', 'mkdir', 'remove', 'rmdir']:\n _original = getattr(os, _name)\n setattr(os, _name, lambda p, *args, _original=_original, **kwargs: _original(_map(p), *args, **kwargs))\n_original_rename = os.rename\nos.rename = lambda src, dst: _original_rename(_map(src), _map(dst))\n_original_open = builtins.open\nclass _BoundedFile:\n def __init__(self, f): self.f = f\n def __enter__(self): return self\n def __exit__(self, *args): self.f.close()\n def read(self, size=-1):\n  if not 0 <= size <= 4096: raise AssertionError('Preview must use small bounded reads')\n  return self.f.read(size)\nbuiltins.open = lambda p, *args, **kwargs: _BoundedFile(_original_open(_map(p), *args, **kwargs))\n`;
+  // os.replace gives the fixture POSIX rename-overwrite semantics on Windows too.
+  const harness = `import os, builtins\n_root = ${JSON.stringify(root)}\ndef _map(p):\n return os.path.join(_root, *p[len('/device/'):].split('/')) if p.startswith('/device/') else (_root if p == '/device' else p)\nfor _name in ['listdir', 'stat', 'mkdir', 'remove', 'rmdir']:\n _original = getattr(os, _name)\n setattr(os, _name, lambda p, *args, _original=_original, **kwargs: _original(_map(p), *args, **kwargs))\n_original_rename = os.replace\nos.rename = lambda src, dst: _original_rename(_map(src), _map(dst))\n_original_open = builtins.open\nclass _BoundedFile:\n def __init__(self, f): self.f = f\n def __enter__(self): return self\n def __exit__(self, *args): self.f.close()\n def read(self, size=-1):\n  if not 0 <= size <= 4096: raise AssertionError('Preview must use small bounded reads')\n  return self.f.read(size)\nbuiltins.open = lambda p, *args, **kwargs: _BoundedFile(_original_open(_map(p), *args, **kwargs))\n`;
   return execFileSync(process.platform === 'win32' ? 'python' : 'python3', ['-c', harness + spec.args[index + 1]!], { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 });
 }
 
@@ -98,9 +99,11 @@ describe('editable binary filesystem', () => {
   it('round-trips binary bytes beyond the text preview limit through private temporary files', async () => {
     const { root, runner, transport } = filesystem();
     const content = Uint8Array.from({ length: 1024 * 1024 + 5 }, (_, index) => index % 256);
+    const expected = Buffer.from(content);
     await transport.writeFileBytes(board, '/device/data.bin', content, { create: true, overwrite: false });
-    expect(readFileSync(path.join(root, 'data.bin'))).toEqual(Buffer.from(content));
-    expect(await transport.readFileBytes(board, '/device/data.bin')).toEqual(content);
+    // Compare every byte without walking a million indexed object properties.
+    expect(readFileSync(path.join(root, 'data.bin')).equals(expected)).toBe(true);
+    expect(Buffer.from(await transport.readFileBytes(board, '/device/data.bin')).equals(expected)).toBe(true);
     for (const spec of runner.calls.filter(call => call.args.includes('cp'))) {
       const local = spec.args.find(arg => path.isAbsolute(arg) && arg !== board.path)!;
       expect(existsSync(local)).toBe(false);

@@ -28,6 +28,8 @@ All changes intended for public delivery are recorded here. Release automation p
 - Updated editor smoke checks for the public identity and removed documentation that claimed an unavailable F5 launch configuration.
 - Corrected managed-tool test fixtures to use their declared platform during reload and compare storage paths without operating-system-specific separators or unescaped regular expressions.
 - Regenerated the dependency lockfile with CI's npm 10 resolver so Vite's optional esbuild peer and its platform packages are recorded correctly; clean installs no longer reject the lockfile on Node.js 22.
+- Made the large binary-transfer regression compare every byte with a native buffer comparison, preserving exact-content coverage without slow per-property assertions that timed out on hosted macOS runners.
+- Aligned host filesystem test fixtures with POSIX device rename-overwrite behavior on Windows, and normalized native paths in transfer-dialog expectations.
 
 ### Security
 
