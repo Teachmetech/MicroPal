@@ -7,6 +7,8 @@ import { MpremoteTransport } from './transport/mpremote';
 import { NodeProcessRunner } from './transport/processRunner';
 import { SerialPortOwners } from './transport/serialPortOwners';
 import { EsptoolFlasher } from './transport/esptool';
+import { SerialConsole } from './transport/serialConsole';
+import { MicroPythonFirmwareService } from './firmware/microPythonFirmware';
 import { createFirmwareFlashCommand } from './ui/flashFirmware';
 import { createConnectCommand } from './ui/connectDevice';
 import { createTerminalLauncher } from './ui/terminalSession';
@@ -50,7 +52,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return () => subscription.dispose();
     },
   });
-  const device = new DeviceManager(new MpremoteTransport(new NodeProcessRunner(), settings, launcher, text => output.append(text)),
+  const console = new SerialConsole(new NodeProcessRunner(), () => tools.paths?.pythonPath,
+    text => output.append(text), () => output.show(true));
+  const device = new DeviceManager(new MpremoteTransport(new NodeProcessRunner(), settings, launcher, text => output.append(text),
+    (port, signal) => console.open(port, signal), () => vscode.workspace.isTrusted && Boolean(tools.paths?.pythonPath)),
     settings, 2000, () => setup.busy);
   const setup = createToolSetupCommands(tools, device, output, toolSettings);
   manager = device;
@@ -99,7 +104,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const portOwners = new SerialPortOwners(new NodeProcessRunner(), {
     managedToolsRoot: path.join(context.globalStorageUri.fsPath, 'tools'),
   });
-  register('connect', createConnectCommand(device, portOwners, () => selectPort(device, output), async () => {
+  register('connect', createConnectCommand(device, portOwners, async () => {
+    // Load an existing console interpreter even when a custom mpremote path
+    // makes setup.ensure unnecessary. This never installs or downloads tools.
+    if (settings().autoShowOutput) await tools.initialize();
+    const port = await selectPort(device, output);
+    if (port && settings().autoShowOutput) output.show(true);
+    return port;
+  }, async () => {
     files.clear();
     if (vscode.workspace.workspaceFolders?.some(folder => folder.uri.scheme === 'file')) await explorer.open();
     else void vscode.window.showInformationMessage('Connected. Open a local project folder, then run MicroPal: Open ESP32 Files in Explorer.');
@@ -119,7 +131,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const flasher = new EsptoolFlasher(new NodeProcessRunner(),
     () => resolveToolPath('esptool', toolSettings().esptoolPath, tools.paths),
     text => output.append(text));
-  register('flashFirmware', createFirmwareFlashCommand(device, flasher, output, () => selectPort(device, output)), ['esptool']);
+  const firmware = new MicroPythonFirmwareService(context.globalStorageUri.fsPath);
+  register('flashFirmware', createFirmwareFlashCommand(device, flasher, output, () => selectPort(device, output), firmware), ['esptool']);
   register('disconnect', () => device.disconnect(), []);
   register('showOutput', () => output.show(true), []);
   register('openRepl', () => device.openRepl());
@@ -197,6 +210,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (event.affectsConfiguration('microPal.mpremotePath') || event.affectsConfiguration('microPal.esptoolPath') || event.affectsConfiguration('microPal.baudRate')) {
       // Never switch executable/configuration underneath an active owner.
       void device.disconnect().catch(error => output.appendLine(String(error)));
+    } else if (event.affectsConfiguration('microPal.autoShowOutput')) {
+      void device.refreshOutput().catch(error => output.appendLine(String(error)));
     }
   }));
   // Mounting a second workspace root may restart the host. Restore the saved

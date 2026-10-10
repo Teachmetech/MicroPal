@@ -142,7 +142,9 @@ export class MpremoteTransport implements DeviceTransport {
     private readonly runner: ProcessRunner,
     private readonly settings: () => DeviceSettings,
     private readonly launchRepl: ReplLauncher,
-    private readonly onOutput?: (text: string) => void
+    private readonly onOutput?: (text: string) => void,
+    private readonly launchConsole?: (port: DevicePort, signal?: AbortSignal) => Promise<InteractiveSession>,
+    private readonly consoleAvailable: () => boolean = () => true,
   ) {}
 
   private command(args: string[]): CommandSpec {
@@ -187,6 +189,14 @@ export class MpremoteTransport implements DeviceTransport {
     await this.execute(port, ['resume', 'exec', 'pass'], signal);
   }
 
+  canOpenConsole(): boolean { return this.launchConsole !== undefined && this.consoleAvailable(); }
+
+  async openConsole(port: DevicePort, signal?: AbortSignal): Promise<InteractiveSession> {
+    this.connected(port, []); // Reuse literal path/identity/baud validation; do not invoke mpremote.
+    if (!this.canOpenConsole()) throw new Error('Automatic output needs MicroPal: Set Up Tools, including its managed Python environment.');
+    return this.launchConsole!(port, signal);
+  }
+
   async runFile(port: DevicePort, localPath: string, signal?: AbortSignal): Promise<void> {
     await this.runner.run(this.connected(port, ['soft-reset', 'run', localAbsolute(localPath)]), {
       signal, timeoutMs: 0, onOutput: this.onOutput
@@ -195,11 +205,15 @@ export class MpremoteTransport implements DeviceTransport {
 
   async stop(port: DevicePort, signal?: AbortSignal): Promise<void> {
     // Entering raw REPL sends Ctrl-C. The manager must release the previous owner first.
-    await this.execute(port, ['resume', 'exec', 'pass'], signal);
+    await this.runner.run(this.connected(port, ['resume', 'exec', 'pass']), {
+      signal, timeoutMs: COMMAND_TIMEOUT_MS, onOutput: this.onOutput
+    });
   }
 
   async softReset(port: DevicePort, signal?: AbortSignal): Promise<void> {
-    await this.execute(port, ['soft-reset'], signal);
+    await this.runner.run(this.connected(port, ['soft-reset']), {
+      signal, timeoutMs: COMMAND_TIMEOUT_MS, onOutput: this.onOutput
+    });
   }
 
   async uploadFile(port: DevicePort, localPath: string, remotePath: string, signal?: AbortSignal): Promise<void> {

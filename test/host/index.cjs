@@ -13,6 +13,7 @@ async function smoke() {
   }
   assert.equal(vscode.workspace.getConfiguration('microPal').get('baudRate'), 115200);
   assert.equal(vscode.workspace.getConfiguration('microPal').get('autoReconnect'), true);
+  assert.equal(vscode.workspace.getConfiguration('microPal').get('autoShowOutput'), true);
   assert.equal(vscode.workspace.getConfiguration('microPal').get('autoReleasePort'), true);
   assert.equal(vscode.workspace.getConfiguration('microPal').get('esptoolPath'), '');
   assert.equal(vscode.workspace.getConfiguration('microPal').get('mpremotePath'), '');

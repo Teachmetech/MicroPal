@@ -315,6 +315,12 @@
           "default": true,
           "description": "Rediscover the selected device after a disconnect or reset. Never reruns user code."
         },
+        "microPal.autoShowOutput": {
+          "type": "boolean",
+          "default": true,
+          "scope": "machine",
+          "description": "Show live ESP32 serial output in the MicroPal Output panel while connected. Requires managed tools. The read-only console releases the port for MicroPal commands and resumes afterward; disable it to leave the idle port free for other applications."
+        },
         "microPal.autoReleasePort": {
           "type": "boolean",
           "default": true,

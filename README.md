@@ -4,7 +4,7 @@
 
 # MicroPal
 
-MicroPal brings a local MicroPython workflow for ESP32 and ESP32-S3 into VS Code and compatible Cursor releases. Select a board, run Python, edit its files directly in the Explorer, and open an interactive REPL. Device operations share one serial ownership queue within the extension, so MicroPal waits for its current tool to close before another takes over.
+MicroPal brings a local MicroPython workflow for ESP32 and ESP32-S3 into VS Code and compatible Cursor releases. Select a board, see live serial output, run Python, edit its files directly in the Explorer, and install MicroPython from the official firmware catalog. Device operations share one serial ownership queue within the extension, so MicroPal waits for its current tool to close before another takes over.
 
 [Source](https://github.com/Teachmetech/MicroPal) · [Report a bug](https://github.com/Teachmetech/MicroPal/issues) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Publisher setup](docs/publisher-setup.md)
 
@@ -33,7 +33,7 @@ MicroPal brings a local MicroPython workflow for ESP32 and ESP32-S3 into VS Code
 1. [Install MicroPal](#install-micropal), install Python 3.10+ with `venv` and `ensurepip`, and open a trusted local project folder.
 2. Run **MicroPal: Set Up Tools** from the Command Palette. This explicitly installs MicroPal's private mpremote and esptool environment.
 3. Plug in your ESP32 or ESP32-S3 with a data-capable USB cable. If it needs MicroPython, follow [Install and flash firmware](#install-and-flash-firmware).
-4. Run **MicroPal: Connect** and select the board's serial port. Close other serial clients first.
+4. Run **MicroPal: Connect** and select the board's serial port. Close other serial clients first. The **MicroPal** Output channel opens automatically and receives live board output while the connection is idle.
 5. Open a saved `.py` file and run **MicroPal: Run Current File**, or use **Upload Current File** / **Sync Project to Device** to store code on the board.
 6. Use **MicroPal: Stop Execution** before browsing **ESP32 Files** in the Explorer. Double-click a device file and save to write it back. Use **MicroPal: Open REPL** when you need interactive input.
 
@@ -44,6 +44,7 @@ Run Current File executes a local file after a soft reset; it does not upload th
 | Feature | What MicroPal provides | Behavior to know |
 | --- | --- | --- |
 | Connect and discover | Serial port discovery, USB/bridge candidates, explicit selection, and status reporting | A USB vendor match is a candidate, not proof of board type. |
+| Live serial output | Automatically show the **MicroPal** Output channel and read board output after Connect | Uses managed Python, holds the idle port, and yields to commands; use REPL for interactive input. |
 | Run Python | Run the current saved `.py` file with streamed Output | Starts with a soft reset; interactive input belongs in the REPL. |
 | Upload and sync | Upload a file or preview and sync a project with exclusions | Matching remote files are overwritten; other remote files remain. |
 | Device Explorer | Writable **ESP32 Files** root, direct saves, new files/folders, rename, and delete | Requires an idle MicroPal session; device deletes are permanent. |
@@ -51,7 +52,7 @@ Run Current File executes a local file after a soft reset; it does not upload th
 | REPL and execution control | Real-terminal REPL, Stop Execution, and Soft Reset | Explicit actions can interrupt board code and take over an existing MicroPal session. |
 | Reconnect | Rediscovery by USB serial identity, or exact selected path as fallback | Never reruns a file or replays an upload. |
 | Serial-port recovery | On macOS/Linux, release surviving managed REPLs and offer consent for other owners | Windows uses manual close; force termination requires separate confirmation. |
-| Firmware flashing | esptool 5.x with chip, image, address, erase choice, confirmation, progress, and cancellation | Supports a single combined binary for ESP32 or ESP32-S3; leaves MicroPal disconnected. |
+| Firmware flashing | Choose an official MicroPython variant/version or a local BIN, then confirm an esptool 5.x flash | Downloads and flashing support cancellation; combined ESP32/S3 images use the correct default address and leave MicroPal disconnected. |
 | Tool setup and repair | Private, version-pinned Python tools installed on an explicit action | Python is supplied by you; setup is never run on activation. |
 
 Debugging, variable/GPIO inspection, WebREPL, remote SSH/containers, custom baud rates, and automatic code replay are outside the current scope.
@@ -61,7 +62,7 @@ Debugging, variable/GPIO inspection, WebREPL, remote SSH/containers, custom baud
 - A desktop VS Code 1.95+ installation or a Cursor release with compatible extension APIs.
 - Python 3.10+ with working `venv` and `ensurepip` modules, installed by you. MicroPal does not bundle Python.
 - An ESP32 or ESP32-S3, a data-capable USB cable, and OS permission to use its serial device. Run/upload/REPL require MicroPython; flashing does not.
-- Internet access to official PyPI during managed tool setup or repair. Installed tools run locally afterward.
+- Internet access to official PyPI during managed tool setup/repair, and to `micropython.org` when choosing official firmware. Installed tools and local firmware work offline.
 - Node.js 22.22.2+ (or 24.15+) and npm to build from source.
 
 The extension runs local tools on the computer running the editor UI. Close Thonny, serial monitors, other editor windows, and other clients using the board before connecting.
@@ -74,6 +75,7 @@ Supported interfaces and recorded verification are different:
 | Operating system | macOS, Windows, and Linux with local serial access | macOS arm64 checks are recorded. Windows/Linux hardware and interactive acceptance remain pending. |
 | Board | ESP32 and ESP32-S3 running suitable MicroPython firmware | A real macOS serial-conflict recovery and subsequent MicroPython connection are recorded. Full physical-board run/upload/filesystem/REPL/flashing acceptance remains pending. |
 | Python tools | Python 3.10+; managed mpremote 1.29.0 and esptool 5.0.2 | Real managed installation verified on macOS with Python 3.11.13. |
+| Official firmware downloads | Stable combined BIN images for generic ESP32 and ESP32-S3 profiles | Real official catalogs and v1.29.0 downloads verified, including stored bytes and local SHA-256; physical flashing remains unverified. |
 | Development runtime | Node.js 22.22.2+ (or 24.15+) and npm | Historical local checks used Node 26.7.0; CI and current results are documented separately. |
 
 Consult the [verification record](docs/verification.md) for exact versions and scope. Passing unit tests or a fake-board editor fixture does not establish compatibility with every board, firmware, USB bridge, or operating system.
@@ -152,15 +154,21 @@ py -3 -m venv .venv
 
 Set **MicroPal: Mpremote Path** and **MicroPal: Esptool Path** in the editor's User settings to the absolute paths of those executables. Select the executables themselves, not `python -m mpremote`, `python -m esptool`, or shell commands. A GUI-launched editor may have a different `PATH` from your shell. See the [official mpremote documentation](https://docs.micropython.org/en/v1.29.0/reference/mpremote.html) for CLI usage.
 
+The automatic serial console uses the private managed Python environment even when mpremote is overridden. Run **Set Up Tools** to enable that console; your executable overrides stay in effect. Without the managed environment, external-tool commands remain available and MicroPal reports the console requirement once. It never installs tools automatically.
+
 ## Install and flash firmware
 
 Run **MicroPal: Set Up Tools** first, or configure your own esptool 5.x executable as described above.
 
-1. Download the `.bin` built for your exact board from [MicroPython downloads](https://micropython.org/download/). The generic [ESP32](https://micropython.org/download/ESP32_GENERIC/) and [ESP32-S3](https://micropython.org/download/ESP32_GENERIC_S3/) pages include installation addresses.
-2. Run **MicroPal: Flash Firmware** from the Command Palette or the device view's flame button. A MicroPython connection is not required. Select the serial port, chip, and local image.
-3. Check the flash address against your firmware's instructions. Standard combined MicroPython images default to `0x1000` for ESP32 and `0x0` for ESP32-S3. Other boards/images may require another address; this workflow accepts a single combined binary, not a set of separate bootloader/application images.
-4. Choose **Write firmware only** (replace the image's sectors) or **Erase entire flash** (delete all files/settings before writing). Review the target, image, address, and erase mode, then confirm **Flash Firmware**.
+1. Run **MicroPal: Flash Firmware** from the Command Palette or the device view's flame button. A MicroPython connection is not required. Select the serial port and the chip that matches your exact board.
+2. Choose **Download official MicroPython** or **Use a local BIN file**. The official option fetches the [ESP32](https://micropython.org/download/ESP32_GENERIC/) or [ESP32-S3](https://micropython.org/download/ESP32_GENERIC_S3/) catalog. Choose the board's variant, then a stable version; the newest stable version appears first. Preview builds, UF2, ELF, and application-only files are excluded.
+3. For an official image, follow the cancellable download progress. MicroPal uses the profile's installation address: `0x1000` for ESP32 and `0x0` for ESP32-S3. For a local BIN, select the file and enter the address supplied with that firmware; the same defaults are offered. This workflow accepts a single combined binary, not separate bootloader/application images.
+4. Choose **Write firmware only** (replace the image's sectors) or **Erase entire flash** (delete all files/settings before writing). Review the chip, port, source/version, image, address, and erase mode in the final modal, then confirm **Flash Firmware**. Cancelling a picker or that confirmation never starts esptool; an official image may already have been downloaded.
 5. Watch the **MicroPal** Output channel. On completion, reset the board if needed and run **MicroPal: Connect**. The extension stays disconnected after flashing, without replaying work.
+
+The ESP32 catalog offers Standard, SPIRAM/WROVER, Unicore/SOLO, OTA, and D2WD variants. ESP32-S3 offers Standard and Octal PSRAM. Match the variant to the board's flash/PSRAM specifications; a USB port match cannot identify that configuration. Consult the manufacturer's instructions and the [official download pages](https://micropython.org/download/) when unsure.
+
+Official downloads use exact HTTPS URLs on `micropython.org`, refuse redirects, and enforce response size and time limits. Complete downloads are stored atomically under extension global storage `firmware/`, with source/version metadata and a local SHA-256 record. Image size, ESP header magic, and chip ID are sanity checks. The local hash records the bytes downloaded; it is not an authenticated upstream checksum or a guarantee that the image suits your exact board. Opening the extension never fetches a catalog or downloads firmware.
 
 Hold **BOOT** while pressing/releasing **RESET** if your board requires manual bootloader entry; follow its manufacturer's instructions. Bootloader USB may appear as a different port, so enter bootloader mode before selecting the port. Close Thonny and other serial clients first.
 
@@ -169,10 +177,10 @@ Cancel from the progress notification or choose **Disconnect** to stop esptool a
 ## Daily workflow
 
 1. Open and trust your local MicroPython project folder. Plug in the board and run **MicroPal: Connect** from the Command Palette or the activity bar.
-2. Select the port. Discovery uses `mpremote connect list`, backed by pyserial's port enumeration. A USB vendor/bridge match is a useful candidate, not proof that the connected device is an ESP32.
+2. Select the port. Discovery uses `mpremote connect list`, backed by pyserial's port enumeration. A USB vendor/bridge match is a useful candidate, not proof that the connected device is an ESP32. With **Auto Show Output** enabled, Connect shows live serial output in the **MicroPal** Output channel. It receives output only while its reader owns the port; earlier output is not recovered.
 3. Open a saved `.py` file and run **Run Current File**. This starts from a clean heap with a soft reset and executes the local file without saving it to the device. Imported project modules must already be uploaded. Output appears in the **MicroPal** Output channel; this mode does not accept interactive input.
 4. Use **Upload Current File** to copy a saved file, or **Sync Project to Device** to upload the selected project. Sync saves open documents that already have file paths before planning uploads; save any untitled files separately first. Review the sync file count and size before confirming. Existing matching remote files are overwritten; other remote files remain.
-5. Use **Stop Execution** to interrupt the board's program. Use **Open REPL** for interactive Python input in a real terminal, including normal mpremote/REPL control keys. Use **Soft Reset** to reboot the MicroPython interpreter.
+5. Use **Stop Execution** to interrupt the board's program. Use **Open REPL** for interactive Python input in a real terminal, including normal mpremote/REPL control keys. Use **Soft Reset** to reboot the MicroPython interpreter. Stop and Soft Reset forward tool output to the **MicroPal** Output channel.
 6. Stop an active Run session or close the REPL, then use **ESP32 Files** below your local folders in the Explorer to edit and manage device files. Use **Refresh Device Files** to see changes made outside MicroPal.
 
 ## Edit and transfer ESP32 files
@@ -199,11 +207,15 @@ Direct editor saves transfer to a hidden `.micropal-upload-*.tmp` staging file b
 
 Run, upload, sync, Stop, and Soft Reset may interrupt the currently running program or close an active REPL to acquire the port. Native filesystem operations ask you to stop an extension Run session or close its REPL first. Once the extension is idle, these filesystem commands enter raw REPL and can still interrupt code started by the board's boot files or another client. Idle discovery only enumerates ports; it does not interrupt or reset the board.
 
-**Connected** means the selected device is logically available for commands. The extension releases its serial handle between commands. A long-running script or REPL retains ownership until it ends or another explicit action takes over. Exclusivity applies within this extension instance; it cannot lock out Thonny, another program, or another editor window.
+**Connected** means the selected device is logically available for commands. By default, the passive console holds the serial port between commands and forwards board output to **MicroPal** Output without sending board commands or accepting input. Before foreground work starts, MicroPal stops the reader and waits for its process to close. The reader returns when the command queue is idle, after Run completes, or after the manual REPL closes. Run streams its own output while active. Capture starts after attachment: pyserial or the driver may clear already buffered input on each open, and output during ownership gaps may be missed. There is no recovery of earlier boot logs, backfill, or automatic program replay.
+
+Set **Auto Show Output** (`microPal.autoShowOutput`) to `false` to disable the idle reader and automatic Output display. A reader failure is logged once; normal commands remain available once process closure is confirmed. If closure cannot be confirmed, MicroPal retains ownership and reports the error. Use Connect again after resolving the problem. With no managed Python console available, or with the console disabled, Connect uses the normal mpremote probe, which can interrupt board code. The passive reader itself sends no Ctrl-C, reset, or raw-REPL command and requests no extra input flush. USB drivers can transiently change serial control lines when a port opens; physical reset behavior still needs board-specific verification. Native Explorer requests also enter raw REPL and can interrupt `boot.py`/`main.py`, including immediately after Connect mounts the device root.
+
+Exclusivity applies within this extension instance; another program or editor window can compete for the same port. Disconnect MicroPal before handing the board to another serial client.
 
 If **Connect** finds the port in use on macOS/Linux, it automatically stops a surviving MicroPal-managed REPL holding that port and retries. For other applications, MicroPal shows the process name and PID with **Release Port and Connect**. This stops the listed process, so its serial monitor/REPL closes and unsaved work may be lost. If it does not exit, **Force Release and Connect** requires a separate confirmation. MicroPal rechecks ownership before stopping anything and cancels recovery if you disconnect or change the connection. Windows requires closing the conflicting serial monitor manually. This recovery runs only from explicit Connect, never background monitoring or Explorer reads.
 
-If USB disappears after a reset or unplug, reconnect looks for the same USB serial number, falling back to the exact port path only when no serial number is available. A fallback path can be reassigned by the OS, so verify the board when using devices without stable USB identity. Presence restoration only enumerates ports; it never reruns your file or replays an upload. Explorer requests remain separate filesystem operations. **Disconnect** stops monitoring and releases local ownership; it is not a guarantee that the board program has stopped. Use **Stop Execution** before disconnecting when needed.
+If USB disappears after a reset or unplug, reconnect looks for the same USB serial number, falling back to the exact port path only when no serial number is available. A fallback path can be reassigned by the OS, so verify the board when using devices without stable USB identity. Presence checks enumerate ports; after the device returns, the passive console can reopen to receive new output. Reconnect never reruns your file or replays an upload. Explorer requests remain separate filesystem operations. **Disconnect** stops monitoring and releases local ownership; it is not a guarantee that the board program has stopped. Use **Stop Execution** before disconnecting when needed.
 
 ## Commands
 
@@ -213,7 +225,7 @@ Open the Command Palette with **Cmd+Shift+P** on macOS or **Ctrl+Shift+P** on Wi
 | --- | --- | --- |
 | Set Up Tools | `microPal.setupTools` | Install and verify the private tools after an explicit action. |
 | Repair Tools | `microPal.repairTools` | Build and verify a fresh tool environment, preserving the previous one on failure. |
-| Connect | `microPal.connect` | Select and probe a serial device; recover a busy port where supported. |
+| Connect | `microPal.connect` | Select a serial device, start live Output when available, and recover a busy port where supported. |
 | Disconnect | `microPal.disconnect` | Cancel active extension work, release local ownership, and stop reconnect monitoring. |
 | Run Current File | `microPal.runFile` | Soft-reset and run a saved local `.py` file with streamed output. |
 | Upload Current File | `microPal.uploadFile` | Copy the saved local file to its project-relative device path, or the device root when outside a project. |
@@ -226,7 +238,7 @@ Open the Command Palette with **Cmd+Shift+P** on macOS or **Ctrl+Shift+P** on Wi
 | Upload Files to ESP32… | `microPal.uploadFilesToDevice` | Pick local files to copy into a device folder. |
 | Upload Folder to ESP32… | `microPal.uploadFolderToDevice` | Pick a local folder to copy into a device folder. |
 | Refresh Device Files | `microPal.refreshFiles` | Refresh cached device listings and editor/Explorer views. |
-| Flash Firmware | `microPal.flashFirmware` | Confirm and flash a local combined firmware image with esptool. |
+| Flash Firmware | `microPal.flashFirmware` | Choose official MicroPython or a local combined BIN, then confirm and flash with esptool. |
 | Show Output | `microPal.showOutput` | Reveal the MicroPal Output channel. |
 
 **Download from ESP32…** (`microPal.downloadFile`) is available on device files/folders in the Explorer and on files in MicroPal's device view. **Open Device File** (`microPal.openDeviceFile`) is the device view's file-opening action. These two actions need a selected device item and are hidden from the Command Palette.
@@ -241,6 +253,7 @@ Open the Command Palette with **Cmd+Shift+P** on macOS or **Ctrl+Shift+P** on Wi
 | `preferredPort` | empty | Preferred port path, `COM` name, or `id:USB_SERIAL_NUMBER`; empty prompts. |
 | `baudRate` | `115200` | V1 supports **only 115200** because upstream mpremote's CLI fixes its serial transport to that rate. Other values fail clearly. |
 | `autoReconnect` | `true` | Rediscover the selected device after it disappears; never replay work. |
+| `autoShowOutput` | `true` | Show MicroPal Output and run the passive serial reader while connected and idle. Requires managed Python; foreground operations take ownership first. |
 | `autoReleasePort` | `true` | On macOS/Linux, automatically stop MicroPal-managed REPLs holding the selected port during Connect. Other processes always require confirmation. |
 | `syncExclusions` | see below | Glob patterns relative to the selected project root. |
 
@@ -263,6 +276,8 @@ Default sync exclusions cover `.git`, `.vscode`, `.venv`, `venv`, `__pycache__`,
 | A device editor says its session is disconnected | Save unsaved edits locally, reconnect, and reopen the file from the current ESP32 Files root. |
 | Files cannot be accessed during Run/REPL | Stop the extension Run session or close its REPL first. Filesystem access then uses raw REPL and can interrupt other board code. |
 | No prompt or unreliable native USB reset | Check the board's USB/firmware configuration and use the manual reset/reconnect checklist. Bootloader mode is not a MicroPython REPL. |
+| Live board output is missing | Run **Show Output**, check `autoShowOutput`, and run **Set Up Tools** if managed Python is missing. Output is unavailable while another operation owns the port; reconnect after a reader failure. |
+| Official firmware cannot be listed or downloaded | Check access to `micropython.org` and the reported timeout, redirect, size, or format error. Retry Flash Firmware or choose a suitable local combined BIN. |
 | A file cannot be opened as text | Device reads are binary-safe. Use the editor's appropriate viewer, or copy/paste the file into your local project and open it there. Available memory, board storage, and transfer deadlines still apply. |
 | A save reports an unsupported overwrite | The device filesystem cannot replace an existing destination using `os.rename`. The original is preserved; save under a new name or back it up before deliberately deleting it. |
 | Unsupported baud rate | Set `baudRate` to `115200`. Other rates require a future transport implementation. |
@@ -271,7 +286,7 @@ Device management and discovery commands have a 30-second deadline; transfer ope
 
 If Stop reports an error, do not assume execution ended. Board code that disables keyboard interrupts or an unavailable USB link can prevent a software stop; use the board's physical controls as appropriate.
 
-The extension downloads and installs Python tool packages only when you explicitly start **Set Up Tools** or **Repair Tools**. It does not install on activation, bundle Python, send telemetry, or download firmware automatically. Firmware flashing runs the selected esptool after explicit confirmation. Device operations require a trusted workspace. Python code and tool executables can have their own effects; review them before use. See [SECURITY.md](SECURITY.md).
+The extension downloads and installs Python tool packages only when you explicitly start **Set Up Tools** or **Repair Tools**. Official firmware catalog requests and downloads happen only within the selected Flash Firmware workflow; esptool starts after the final confirmation. Activation performs no installation or network request. MicroPal does not bundle Python or send telemetry. Device operations require a trusted workspace. Python code and tool executables can have their own effects; review them before use. See [SECURITY.md](SECURITY.md).
 
 ## Development and releases
 

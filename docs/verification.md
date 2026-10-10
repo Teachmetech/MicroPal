@@ -2,6 +2,17 @@
 
 Entries record the evidence available at the time of each change. The newest section supersedes earlier statements about repository, CI, or publication availability; historical limits are retained for traceability.
 
+## Live output and official MicroPython downloads — 2026-10-09
+
+- Final `npm run check` passed locally: TypeScript, ESLint, 481 tests across 20 suites, and the extension bundle build. New regression coverage includes passive Connect, queue priority and verified serial handoffs, startup/cancellation/early-exit races, manual REPL and Run completion, failure suppression, console configuration, official catalogs/downloads, and flashing dialogs.
+- Isolated VS Code 1.140.0 and Cursor (VS Code API 1.128.0) hosts passed activation, all 19 commands, configuration defaults including `autoShowOutput: true`, Output, Disconnect, and filesystem provider registration.
+- A real Python subprocess with a fake serial module verified the helper's USB identity resolution, future output streaming, and absence of explicit board writes/reset/input-flush requests. An independent composed manager/subprocess fixture verified confirmed child exit before filesystem, Run, REPL and flash handoffs, automatic reader return after Run/REPL, flash remaining disconnected, changed/ambiguous identity rejection, and cleanup with no active readers. These fixtures do not use a physical serial device. Upstream pyserial can clear receive buffers during open despite the helper requesting no additional flush.
+- Real official `ESP32_GENERIC` and `ESP32_GENERIC_S3` catalogs were fetched, with 90 and 30 supported stable links respectively and v1.29.0 newest at verification. Standard combined BIN downloads were 1,790,544 and 1,783,296 bytes; their headers identified the intended chip and the stored whole-file hashes matched the service's local SHA-256 records. Live stream cancellation settled promptly with no partial storage left.
+- A composed firmware service/wizard smoke check downloaded ESP32 SPIRAM (1,612,336 bytes) and ESP32-S3 SPIRAM_OCT (1,786,704 bytes), selected the expected `0x1000` / `0x0` addresses, and exercised the source/variant confirmation with a simulated flashing boundary. No esptool hardware operation ran; temporary download stores were removed.
+- Independent implementation reviews found and verified fixes for immediate console exit/closure failures, startup Output callback failures, and panel-reveal cleanup. No actionable review findings remain. README, architecture, manual acceptance, and Unreleased notes describe the new behavior and limits.
+
+Physical ESP32 output, USB control-line/reset behavior, actual erase/write/boot, and Windows/Linux hardware acceptance remain on the [manual checklist](manual-testing.md). Existing native Explorer requests still enter raw REPL and can interrupt independently running board code. Output before attachment or between serial owners is not recovered. This source change does not establish a new public release or store publication.
+
 ## Public release preparation — 2026-10-09
 
 - Typechecking, linting, build, and 426 tests across 18 suites passed locally. The isolated release integration creates a real VSIX and verifies the `v0.2.1` to `v0.3.0` version transition, persisted human/generated changelog notes, version commit, tag, packaged identity, and artifact checksum.

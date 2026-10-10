@@ -1,10 +1,10 @@
 # Manual acceptance checklist
 
-**Hardware status: not performed.** Local editor smoke tests and real managed-tool installation results are recorded in [verification results](verification.md). The interactive and physical acceptance cases below need separate recorded results. Automated unit tests use controlled transports and local subprocesses; they do not establish compatibility with a physical ESP32, USB bridge, or firmware build. Complete and record this matrix before claiming hardware support or publishing a release.
+**Hardware status: not performed.** Local editor smoke tests and real managed-tool installation results are recorded in [verification results](verification.md). Official ESP32/S3 catalogs and v1.29.0 BIN downloads have also been verified without flashing a board. The new live console and firmware wizard still need the interactive and physical acceptance cases below. Automated unit tests use controlled transports and local subprocesses; they do not establish compatibility with a physical ESP32, USB bridge, or firmware build. Record this matrix before claiming physical-board acceptance.
 
 ## Record the environment
 
-For each run, record date/commit, OS/version, editor/version, extension version, Python/mpremote/esptool versions, managed or external tool selection, board model/revision, MicroPython build, USB interface type, and whether a stable USB serial number exists. Redact actual serial numbers and personal paths from public reports.
+For each run, record date/commit, OS/version, editor/version, extension version, Python/mpremote/esptool versions, managed or external tool selection, `autoShowOutput`, board model/revision, MicroPython build/variant, USB interface type, and whether a stable USB serial number exists. For firmware downloads, record the official URL, selected address, bytes, and local SHA-256. Redact actual serial numbers and personal paths from public reports.
 
 | Platform | ESP32 via USB–UART bridge | ESP32-S3 via native USB CDC | VS Code | Cursor |
 | --- | --- | --- | --- | --- |
@@ -26,7 +26,7 @@ Test CP210x or CH340/CH910x bridges where available, and each native USB connect
 
 ## Managed tool setup and repair
 
-- [ ] In a clean editor profile, verify `pythonPath`, `mpremotePath`, and `esptoolPath` default to empty. Activate the extension without issuing commands; verify no package download or installation begins.
+- [ ] In a clean editor profile, verify `pythonPath`, `mpremotePath`, and `esptoolPath` default to empty and `autoShowOutput` defaults to true. Activate the extension without issuing commands; verify no package installation, firmware catalog request, or download begins.
 - [ ] With managed tools absent, request a device command and dismiss the Set Up Tools offer. Verify no installer, network request, or device operation begins. Accept the offer on a second attempt and verify setup is explicit.
 - [ ] Run **MicroPal: Set Up Tools** with Python 3.10+ and working `venv`/`ensurepip`. Verify progress/output, installation from official PyPI, and exact `mpremote 1.29.0`/esptool `5.0.2` version checks.
 - [ ] Verify tools are under extension global storage `tools/env-UUID`, with `tools.json` selecting the verified generation. Confirm global Python packages and system `PATH` are unchanged; Python itself is not downloaded or bundled.
@@ -41,11 +41,15 @@ Test CP210x or CH340/CH910x bridges where available, and each native USB connect
 
 - [ ] Test the managed esptool after Set Up Tools, then test a separately installed esptool 5.x through `microPal.esptoolPath`, including a path containing spaces. Test a missing executable and an incompatible esptool version for a useful failure.
 - [ ] From a disconnected board without MicroPython, select Flash Firmware and verify port selection works without a REPL probe. If native USB changes in bootloader mode, enter that mode before selecting its port.
-- [ ] Verify ESP32 defaults to `0x1000` and ESP32-S3 to `0x0`; compare against the exact board's firmware page. Test a valid override and rejection of invalid/unaligned addresses, empty files, and non-binary paths.
-- [ ] Dismiss each picker and the final confirmation in turn; verify esptool never starts. Check the final confirmation identifies the chip, port, image, address, and erase mode.
+- [ ] Follow port → chip → **Download official MicroPython** → variant → stable version. Verify the newest stable version is first, the image matches the selected board/variant, and no preview, UF2, ELF, application-only image, or obsolete S3 FLASH_4M choice appears. Compare against the official download page.
+- [ ] Check ESP32 Standard/SPIRAM/UNICORE/OTA/D2WD and ESP32-S3 Standard/SPIRAM_OCT choices against the board's flash/PSRAM specifications. A detected USB device must not choose a PSRAM variant automatically.
+- [ ] Download an official image, verify cancellable byte progress and the reported source, byte count, and **local** SHA-256 in Output. Verify the image and JSON metadata are under extension global storage `firmware/`. Compare the local file hash independently; do not record it as an authenticated upstream checksum.
+- [ ] Cancel catalog fetching and image downloading, then retry. Test offline/network failure. Verify useful errors, no esptool invocation, and no remaining partial staging directory. Verify a cancelled final confirmation can leave an already completed download cached without flashing.
+- [ ] Confirm official ESP32 uses `0x1000` and ESP32-S3 uses `0x0` without asking for another address. Select **Use a local BIN file**, check the same offered defaults, and test a valid override plus rejection of invalid/unaligned addresses, empty files, and non-binary paths.
+- [ ] Dismiss each picker and the final confirmation in turn; verify esptool never starts. Check the final confirmation identifies the chip, port, source/version where applicable, image, address, and erase mode.
 - [ ] Flash a board-specific combined image and verify streamed output, esptool verification, disconnected completion, and a successful subsequent explicit Connect. Verify a mismatched-chip image is rejected without using `--force`.
 - [ ] On a disposable board, test full erase and verify old files/settings are removed. Check write-only mode does not request a full erase; preservation depends on the image's written sectors.
-- [ ] Flash during a Run session and during REPL; verify confirmed old-process/terminal closure before esptool acquires the port. Verify Connect, Run, and another Flash cannot compete while writing.
+- [ ] Flash while the idle console is active, during a Run session, and during REPL; verify confirmed old-process/terminal closure before esptool acquires the port. Verify Connect, Run, and another Flash cannot compete while writing.
 - [ ] Cancel in progress, Disconnect, unplug, and close the editor during a write. Verify esptool terminates and releases ownership, no automatic reconnect/replay occurs, and an explicit reflash can recover partial firmware.
 
 ## Discovery and selection
@@ -55,14 +59,28 @@ Test CP210x or CH340/CH910x bridges where available, and each native USB connect
 - [ ] Attach two devices; verify explicit selection and that operations affect only the selected board.
 - [ ] Set `preferredPort` to a path/COM name, then `id:USB_SERIAL_NUMBER`. Verify selection for each and behavior when it is absent.
 - [ ] Leave a board program printing for at least 30 seconds while discovery monitors presence. Confirm idle discovery does not interrupt/reset it.
-- [ ] Check connected status between commands while a separate serial tool can acquire the released port; close that tool before continuing.
+- [ ] Verify the enabled idle console holds the selected port between commands. Disconnect before opening a separate serial tool. With `autoShowOutput` disabled, verify no idle reader holds the port; close any external client before the next MicroPal command.
+
+## Automatic serial output
+
+- [ ] Connect with managed tools and `autoShowOutput: true`. Verify the persistent **MicroPal** Output channel opens and receives continuing `print()` output without a Run command or manual REPL. Test ESP32 USB–UART and ESP32-S3 native USB separately.
+- [ ] Isolate passive Connect by using a trusted editor window without a local workspace folder, so Explorer does not mount/query device files. Start an expendable `main.py` counter beforehand and verify Connect sends no Ctrl-C/reset/raw-REPL command. Record any actual reset caused by USB control-line transitions; repeat with the bridge/driver combinations in scope.
+- [ ] Repeat with a local workspace and **ESP32 Files** mounted. Verify filesystem requests can interrupt that counter as documented, even though the idle reader is passive. Do not attribute raw-REPL interruption to port enumeration or promise uninterrupted `main.py` execution.
+- [ ] Upload, sync, read/save a device file, Stop, and Soft Reset while the console owns the idle port. Verify reader process closure precedes the foreground operation, then new output resumes when the queue becomes idle. Use a disposable serial fixture to inspect overlap where needed.
+- [ ] Run a printing script. Verify its process supplies live output, with no second idle reader. After Run exits or Stop finishes, verify the passive reader returns without rerunning the script.
+- [ ] Open manual REPL while the console is active. Verify the reader closes first, interactive input/output belongs to the terminal, and closing the terminal restores passive Output after confirmed terminal exit.
+- [ ] Set `autoShowOutput` false while connected and verify the reader closes without interrupting the board program. Run **Show Output** manually and verify it only reveals the channel. Re-enable the setting and verify passive output can resume without a program replay.
+- [ ] With an external mpremote override and no managed environment, verify ordinary commands remain usable, the console requirement is logged once, and no installation starts. Run Set Up Tools explicitly, retain the override, reconnect, and verify the managed-Python console works. Note that a fallback mpremote Connect probe can interrupt board code.
+- [ ] Cause a reader startup/runtime failure using an expendable fixture. Verify one actionable log, no repeated retry/error loop from presence polling, usable foreground commands after confirmed process closure, and recovery on explicit Connect after the problem is resolved. Simulate an unconfirmed close in a fixture and verify ownership is retained with an error, without a competing client.
+- [ ] Print split UTF-8 characters and sustained output beyond the process wrapper's retained diagnostic limit. Verify streamed output continues. Record that pyserial/driver open can discard previously buffered RX bytes; test attachment and ownership handoffs without claiming recovery of earlier boot logs or output produced while another operation owns the port.
+- [ ] Disconnect, unplug, change ports, run Set Up/Repair Tools, flash firmware, and reload/close the host while the console is active. Verify confirmed process closure before a replacement owner and no stale output from an earlier session. Test identity changes at a reused serial path with a disposable fixture.
 
 ## Files and program execution
 
 - [ ] Run `examples/heartbeat.py` directly. Observe output in the MicroPal Output channel and a running state. Confirm it did not create a file on the board.
 - [ ] Run another script that checks a variable from the prior run is absent, confirming a clean interpreter heap.
 - [ ] Run a script importing a local project module before and after uploading that module; verify the missing import and then successful import.
-- [ ] Stop the heartbeat. Confirm output ceases on the board, status recovers, and a new command succeeds.
+- [ ] Stop the heartbeat. Confirm output ceases on the board, status recovers, and a new command succeeds. Verify Stop and Soft Reset forward their tool output to the MicroPal Output channel before the idle reader returns.
 - [ ] Run code with a Python exception; verify traceback output and a usable subsequent command.
 - [ ] Upload a filename containing spaces and shell metacharacters supported by the host filesystem. Confirm the literal name, without unintended execution.
 - [ ] Sync nested Python/assets, a hidden file, excluded `.env`/virtual-environment files, and symlinks. Check the preview, then verify included paths, skipped exclusions/symlinks, and preserved remote-only files.
@@ -112,12 +130,12 @@ Test CP210x or CH340/CH910x bridges where available, and each native USB connect
 - [ ] ESP32 via USB–UART: press hardware reset while idle, while running, and during REPL. Observe whether the port stays present; verify no automatic replay and a successful next explicit command.
 - [ ] ESP32-S3 native USB: soft reset and press hardware reset. Observe port disappearance/path changes, identity-based rediscovery, and interpreter readiness for the next command.
 - [ ] Unplug during discovery, connect/probe, Run, upload, filesystem read, and REPL. Verify a recoverable status with no stuck busy/ownership state.
-- [ ] Replug the same stable-identity board under a different path. Confirm it reconnects without resetting, rerunning, uploading, or reading files automatically.
+- [ ] Replug the same stable-identity board under a different path. Confirm presence restoration does not send a reset, rerun, upload, or filesystem query. An enabled passive console may reopen to receive new bytes; separately record any driver/control-line reset and later Explorer requests.
 - [ ] While the selected board is absent, plug in a different board at a reused path. When USB identities are available, verify it is not silently selected.
 - [ ] Test a device without a USB serial identity. Document path fallback and explicitly select the new path when it changes.
 - [ ] Turn `autoReconnect` off; verify no automatic reacquisition. Turn it on and verify the expected presence behavior.
 - [ ] Disconnect explicitly, then replug. Verify monitoring remains stopped until a user connects again.
-- [ ] Enter bootloader mode. Verify an error or unavailable state instead of treating the bootloader as a usable MicroPython REPL; recover using normal board procedures.
+- [ ] Enter bootloader mode. A passive port open alone must not be treated as proof of MicroPython readiness. Verify actual device commands fail usefully when no MicroPython REPL is available, then recover using normal board procedures.
 
 ## Record outcomes
 

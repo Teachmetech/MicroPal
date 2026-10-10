@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import * as path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MpremoteTransport, normalizeRemotePath, parsePorts, parseStructuredOutput } from '../src/transport/mpremote';
 import type { CommandResult, CommandSpec, DevicePort, DeviceSettings, ProcessOptions, ProcessRunner } from '../src/core/types';
 
@@ -75,6 +75,28 @@ function filesystem() {
   return { root, runner, output, transport: new MpremoteTransport(runner, () => defaults,
     async () => ({ closed: Promise.resolve(), close: async () => {}, show: () => {} }), text => output.push(text)) };
 }
+
+describe('passive console transport', () => {
+  it('passes the selected USB identity and cancellation to the passive launcher without any raw REPL command', async () => {
+    const runner = new RecordingRunner();
+    const session = { closed: Promise.resolve(), close: async () => {}, show: () => {} };
+    const launch = vi.fn(async () => session);
+    const controller = new AbortController();
+    const transport = new MpremoteTransport(runner, () => defaults, async () => session, undefined, launch, () => true);
+    const port = { ...board, serialNumber: 'stable-board-id' };
+    expect(transport.canOpenConsole()).toBe(true);
+    expect(await transport.openConsole(port, controller.signal)).toBe(session);
+    expect(launch).toHaveBeenCalledWith(port, controller.signal);
+    expect(runner.calls).toEqual([]);
+  });
+
+  it('reports missing managed console support without invoking custom mpremote', async () => {
+    const { transport, runner } = setup();
+    expect(transport.canOpenConsole()).toBe(false);
+    await expect(transport.openConsole(board)).rejects.toThrow(/Set Up Tools/);
+    expect(runner.calls).toEqual([]);
+  });
+});
 
 describe('editable binary filesystem', () => {
   it('binds every upload stage and commit to the USB identity instead of a reusable serial path', async () => {
@@ -308,6 +330,13 @@ describe('command construction', () => {
       ['connect', board.path, 'soft-reset']
     ]);
     expect(runner.calls.every(call => (call.options?.timeoutMs ?? 0) > 0)).toBe(true);
+  });
+  it('streams Stop and Soft Reset output while the passive console is paused', async () => {
+    const { runner, transport, output } = setup();
+    await transport.stop(board); await transport.softReset(board);
+    runner.calls[0]!.options?.onOutput?.('stopped\n');
+    runner.calls[1]!.options?.onOutput?.('MPY: soft reboot\n');
+    expect(output).toEqual(['stopped\n', 'MPY: soft reboot\n']);
   });
   it('launches REPL in the supplied real-terminal launcher', async () => {
     const { transport, runner, launches, session } = setup();

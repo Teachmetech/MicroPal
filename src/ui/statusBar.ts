@@ -17,7 +17,7 @@ export class DeviceStatusBar implements vscode.Disposable {
   private update(state: ConnectionState): void {
     const present = ['connected', 'busy', 'running', 'repl'].includes(state.phase);
     this.item.text = `$(${icons[state.phase]}) MicroPal: ${state.phase}${state.port ? ` · ${state.port.path}` : ''}`;
-    this.item.tooltip = [state.port?.description, state.message, 'Connected means available for commands; the serial port is released while idle.'].filter(Boolean).join('\n');
+    this.item.tooltip = [state.port?.description, state.message, 'Live output yields the serial port to MicroPal commands. Click to open the interactive REPL.'].filter(Boolean).join('\n');
     this.item.command = present ? 'microPal.openRepl' : 'microPal.connect';
     this.item.backgroundColor = state.phase === 'error' ? new vscode.ThemeColor('statusBarItem.warningBackground') : undefined;
     this.item.show();
