@@ -94,7 +94,8 @@ describe('ManagedTools', () => {
     expect(paths.pythonPath).toBe(join(environmentOf(paths.pythonPath), 'bin', 'python'));
     expect(paths.mpremotePath).toBe(join(environmentOf(paths.pythonPath), 'bin', 'mpremote'));
     expect(paths.esptoolPath).toBe(join(environmentOf(paths.pythonPath), 'bin', 'esptool'));
-    expect(environmentOf(paths.pythonPath)).toMatch(new RegExp(`^${storage}/env-`));
+    expect(dirname(environmentOf(paths.pythonPath))).toBe(storage);
+    expect(basename(environmentOf(paths.pythonPath))).toMatch(/^env-/);
     const creation = runner.run.mock.calls.find(([spec]) => spec.args.includes('venv'))!;
     expect(creation[0]).toEqual({ executable: '/usr/local/bin/python3',
       args: ['-I', '-m', 'venv', environmentOf(paths.pythonPath)] });
@@ -112,7 +113,7 @@ describe('ManagedTools', () => {
       pins: { esptool: '5.0.2', mpremote: '1.29.0' } });
     expect(service.busy).toBe(false);
     const reloadRunner = runnerDouble();
-    const reload = new ManagedTools(storage, reloadRunner, output);
+    const reload = new ManagedTools(storage, reloadRunner, output, 'darwin');
     services.push(reload);
     await reload.initialize();
     expect(reload.paths).toEqual(paths);

@@ -1,0 +1,23 @@
+name: Bug report
+description: Report a reproducible MicroPal problem.
+labels: [bug]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the expected behavior, actual behavior, and steps to reproduce.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include MicroPal version, VS Code or Cursor version, OS, board/chip, MicroPython version, and connection type.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs and evidence
+      description: Share relevant MicroPal output after removing secrets, personal paths, device identifiers, and private code. Security reports belong in the private reporting process in SECURITY.md.

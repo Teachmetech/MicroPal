@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const vscode = require('vscode');
 
 async function smoke() {
-  const extension = vscode.extensions.getExtension('micropal-local.micropal');
+  const extension = vscode.extensions.getExtension('teachmetech.micropal');
   assert.ok(extension, 'Development extension is discoverable');
   await extension.activate();
   assert.equal(extension.isActive, true, 'Extension activates in a trusted empty workspace');

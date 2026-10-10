@@ -1,0 +1,59 @@
+# JavaScript dependencies and generated output
+node_modules/
+dist/
+out/
+coverage/
+*.tsbuildinfo
+*.vsix
+*.vsix.sha256
+
+# Local tools, Python environments, and caches
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Secrets and local overrides
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+.npmrc
+.pypirc
+.vsce
+
+# Hardware artifacts and private diagnostic captures
+*.bin
+*.elf
+*.uf2
+*.hex
+*.log
+logs/
+firmware/
+serial-captures/
+
+# Editor and OS state
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+*.code-workspace
+*.swp
+*.swo
+
+# Temporary files
+tmp/
+temp/
+.cache/
+.artifacts/
+.release/

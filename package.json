@@ -3,7 +3,15 @@
   "displayName": "MicroPal",
   "description": "MicroPython development and firmware flashing for ESP32 with deliberate serial ownership and reset-aware reconnection.",
   "version": "0.2.1",
-  "publisher": "micropal-local",
+  "publisher": "teachmetech",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Teachmetech/MicroPal.git"
+  },
+  "homepage": "https://github.com/Teachmetech/MicroPal#readme",
+  "bugs": {
+    "url": "https://github.com/Teachmetech/MicroPal/issues"
+  },
   "icon": "media/icon.png",
   "license": "MIT",
   "engines": {
@@ -46,7 +54,7 @@
     "test:watch": "vitest",
     "check": "npm run typecheck && npm run lint && npm test && npm run build",
     "vscode:prepublish": "npm run build",
-    "package": "vsce package --no-dependencies --allow-missing-repository --no-rewrite-relative-links --out micropal-0.2.1.vsix",
+    "package": "node scripts/package.mjs",
     "test:host": "npm run build && node scripts/test-host.mjs",
     "test:tools": "node scripts/test-tools.mjs",
     "test:filesystem:host": "node scripts/test-filesystem-host.mjs",
@@ -102,13 +110,13 @@
       },
       {
         "command": "microPal.uploadFilesToDevice",
-        "title": "Upload Files to ESP32\u2026",
+        "title": "Upload Files to ESP32…",
         "category": "MicroPal",
         "icon": "$(cloud-upload)"
       },
       {
         "command": "microPal.uploadFolderToDevice",
-        "title": "Upload Folder to ESP32\u2026",
+        "title": "Upload Folder to ESP32…",
         "category": "MicroPal",
         "icon": "$(cloud-upload)"
       },
@@ -155,7 +163,7 @@
       },
       {
         "command": "microPal.downloadFile",
-        "title": "Download from ESP32\u2026",
+        "title": "Download from ESP32…",
         "category": "MicroPal",
         "icon": "$(cloud-download)"
       },
@@ -337,11 +345,15 @@
     }
   },
   "devDependencies": {
+    "@semantic-release/git": "11.0.1",
     "@types/node": "^22.19.0",
     "@types/vscode": "1.95.0",
-    "@vscode/vsce": "^3.6.0",
+    "@vscode/vsce": "4.0.0",
+    "conventional-changelog-conventionalcommits": "9.3.1",
     "esbuild": "^0.25.11",
     "eslint": "^10.11.0",
+    "ovsx": "1.2.0",
+    "semantic-release": "25.0.9",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.0",
     "vitest": "^4.1.11"

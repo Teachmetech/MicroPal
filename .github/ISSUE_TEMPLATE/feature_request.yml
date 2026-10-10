@@ -1,0 +1,23 @@
+name: Feature request
+description: Suggest an improvement to MicroPal.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: Explain the task you are trying to complete and the limitation you encounter.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed improvement
+      description: Describe the behavior you want and alternatives you have considered.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Hardware and editor context
+      description: Add relevant boards, operating systems, editor versions, or compatibility requirements.
