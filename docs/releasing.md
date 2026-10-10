@@ -25,6 +25,8 @@ This workflow intentionally keeps the GitHub release available if a store has no
 
 ## VS Code Marketplace authentication
 
+Starting without publisher accounts? Follow the [publisher registration walkthrough](publisher-setup.md) for exact IDs, account forms, namespace creation, and GitHub credential settings.
+
 Create the Marketplace publisher and ensure the publishing identity has its Contributor permission. Set up Microsoft Entra workload identity using [VS Code's secure publishing guide](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#secure-automated-publishing-to-visual-studio-marketplace) and [Microsoft's GitHub OIDC instructions](https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure-openid-connect).
 
 Configure GitHub Actions variables `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID`. Setting `AZURE_CLIENT_ID` selects Azure authentication: the pinned `azure/login` action obtains a short-lived credential, and `vsce publish --azure-credential --packagePath ...` uploads the verified VSIX. Bind the Entra federated credential to this repository's `production` environment. Use the repository's actual OIDC subject; newly created repositories can include immutable owner/repository IDs, so do not copy an old `repo:OWNER/REPO:...` example blindly. See [GitHub's immutable subject documentation](https://docs.github.com/en/actions/reference/security/oidc#immutable-subject-claims).
@@ -33,7 +35,7 @@ As a bootstrap fallback, leave `AZURE_CLIENT_ID` unset and store an appropriatel
 
 ## Open VSX and Cursor
 
-Create an Open VSX account, accept the publisher agreement, create the exact-case `teachmetech` namespace, and complete the [namespace ownership process](https://github.com/EclipseFdn/open-vsx.org/wiki/Managing-Namespaces). For the first publication, create an Open VSX access token and save it as the `OVSX_PAT` Actions secret. Leave `OVSX_TRUSTED_PUBLISHING` unset or `false`. The first upload requires a token because trusted publishing needs an active extension version.
+Create an Open VSX account, personally accept the publisher agreement, and create the exact-case `teachmetech` namespace. For the first upload, create an Open VSX access token and save it as the `OVSX_PAT` Actions secret. Leave `OVSX_TRUSTED_PUBLISHING` unset or `false`. After the bootstrap upload, complete the [namespace ownership process](https://github.com/EclipseFdn/open-vsx.org/wiki/Managing-Namespaces); a matching Marketplace extension may require admin review before activation. The first upload requires a token because trusted publishing needs an active extension version.
 
 After the namespace is verified and the extension has an active version, register this GitHub repository, workflow filename `ci-release.yml`, and environment `production` as an Open VSX trusted publisher. Then set Actions variable `OVSX_TRUSTED_PUBLISHING=true`; the CLI uses `--trusted-publishing` and the job's short-lived OIDC credential. Remove the bootstrap PAT when the new method is verified. Open VSX trust rules do not themselves restrict the Git ref, so retain the GitHub environment's production-only deployment branch rule. Follow the [Open VSX trusted publishing guide](https://github.com/eclipse-openvsx/openvsx/wiki/Trusted-Publishing) and [CLI documentation](https://github.com/eclipse-openvsx/openvsx/tree/main/cli#publish-extensions).
 

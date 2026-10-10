@@ -6,7 +6,7 @@
 
 MicroPal brings a local MicroPython workflow for ESP32 and ESP32-S3 into VS Code and compatible Cursor releases. Select a board, run Python, edit its files directly in the Explorer, and open an interactive REPL. Device operations share one serial ownership queue within the extension, so MicroPal waits for its current tool to close before another takes over.
 
-[Source](https://github.com/Teachmetech/MicroPal) · [Report a bug](https://github.com/Teachmetech/MicroPal/issues) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
+[Source](https://github.com/Teachmetech/MicroPal) · [Report a bug](https://github.com/Teachmetech/MicroPal/issues) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Publisher setup](docs/publisher-setup.md)
 
 **Release status:** MicroPal is an early development extension. Use [GitHub Releases](https://github.com/Teachmetech/MicroPal/releases) for versioned VSIX downloads and release notes, or build from source. Visual Studio Marketplace and Open VSX publication is configured but awaits publisher registration and authentication; neither store listing is published yet. See the [verification record](docs/verification.md) for completed checks and the [manual acceptance checklist](docs/manual-testing.md) for outstanding editor, platform, and hardware checks.
 
@@ -62,7 +62,7 @@ Debugging, variable/GPIO inspection, WebREPL, remote SSH/containers, custom baud
 - Python 3.10+ with working `venv` and `ensurepip` modules, installed by you. MicroPal does not bundle Python.
 - An ESP32 or ESP32-S3, a data-capable USB cable, and OS permission to use its serial device. Run/upload/REPL require MicroPython; flashing does not.
 - Internet access to official PyPI during managed tool setup or repair. Installed tools run locally afterward.
-- Node.js 22.14+ (or 24.10+) and npm to build from source.
+- Node.js 22.22.2+ (or 24.15+) and npm to build from source.
 
 The extension runs local tools on the computer running the editor UI. Close Thonny, serial monitors, other editor windows, and other clients using the board before connecting.
 
@@ -74,7 +74,7 @@ Supported interfaces and recorded verification are different:
 | Operating system | macOS, Windows, and Linux with local serial access | macOS arm64 checks are recorded. Windows/Linux hardware and interactive acceptance remain pending. |
 | Board | ESP32 and ESP32-S3 running suitable MicroPython firmware | A real macOS serial-conflict recovery and subsequent MicroPython connection are recorded. Full physical-board run/upload/filesystem/REPL/flashing acceptance remains pending. |
 | Python tools | Python 3.10+; managed mpremote 1.29.0 and esptool 5.0.2 | Real managed installation verified on macOS with Python 3.11.13. |
-| Development runtime | Node.js 22.14+ (or 24.10+) and npm | Historical local checks used Node 26.7.0; CI and current results are documented separately. |
+| Development runtime | Node.js 22.22.2+ (or 24.15+) and npm | Historical local checks used Node 26.7.0; CI and current results are documented separately. |
 
 Consult the [verification record](docs/verification.md) for exact versions and scope. Passing unit tests or a fake-board editor fixture does not establish compatibility with every board, firmware, USB bridge, or operating system.
 
@@ -86,7 +86,7 @@ Both stores are planned release targets. The configured public extension identit
 
 ### Install a VSIX
 
-To build from source, clone the repository and use Node.js 22.14+ (or 24.10+):
+To build from source, clone the repository and use Node.js 22.22.2+ (or 24.15+):
 
 ```sh
 git clone https://github.com/Teachmetech/MicroPal.git

@@ -19,6 +19,7 @@ All changes intended for public delivery are recorded here. Release automation p
 - Made package filenames follow the actual manifest version, so automated releases no longer require editing a hard-coded VSIX path.
 - Updated packaging to VSCE 4 and pinned semantic-release, its Git/changelog integrations, and the Open VSX CLI; retained the lockfile for reproducible builds and documented remaining development-tool dependency advisories. CI rejects production dependency vulnerabilities.
 - Documented production merge conventions, publishing-account registration, modern OIDC authentication, transitional PAT use, first-publication requirements, and repository/environment configuration.
+- Added a publisher onboarding guide with the exact Marketplace/Open VSX account steps and repository settings required to activate automatic publication; aligned development prerequisites with the release tools' Node.js 22.22.2+/24.15+ requirements and updated the architecture/verification documentation for hosted CI.
 
 ### Fixed
 
@@ -26,6 +27,7 @@ All changes intended for public delivery are recorded here. Release automation p
 - Restricted VSIX contents to an explicit allowlist, retaining user-facing documentation and excluding development plans, local verification records, source/tests, release tooling, credentials, and generated artifacts.
 - Updated editor smoke checks for the public identity and removed documentation that claimed an unavailable F5 launch configuration.
 - Corrected managed-tool test fixtures to use their declared platform during reload and compare storage paths without operating-system-specific separators or unescaped regular expressions.
+- Regenerated the dependency lockfile with CI's npm 10 resolver so Vite's optional esbuild peer and its platform packages are recorded correctly; clean installs no longer reject the lockfile on Node.js 22.
 
 ### Security
 

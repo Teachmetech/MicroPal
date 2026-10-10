@@ -4,7 +4,7 @@ Focused improvements and reproducible bug reports are welcome at [Teachmetech/Mi
 
 ## Development setup
 
-Use Node.js 22.14+ (or 24.10+), npm, and Python 3.10+. Transport tests execute generated device snippets with the available Python interpreter.
+Use Node.js 22.22.2+ (or 24.15+), npm, and Python 3.10+. Transport tests execute generated device snippets with the available Python interpreter.
 
 ```sh
 git clone https://github.com/Teachmetech/MicroPal.git

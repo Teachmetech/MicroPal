@@ -1,5 +1,7 @@
 # Verification record
 
+Entries record the evidence available at the time of each change. The newest section supersedes earlier statements about repository, CI, or publication availability; historical limits are retained for traceability.
+
 ## Public release preparation — 2026-10-09
 
 - Typechecking, linting, build, and 426 tests across 18 suites passed locally. The isolated release integration creates a real VSIX and verifies the `v0.2.1` to `v0.3.0` version transition, persisted human/generated changelog notes, version commit, tag, packaged identity, and artifact checksum.
