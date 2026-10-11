@@ -8,7 +8,7 @@ async function smoke() {
   await extension.activate();
   assert.equal(extension.isActive, true, 'Extension activates in a trusted empty workspace');
   const commands = await vscode.commands.getCommands(true);
-  for (const command of ['setupTools', 'repairTools', 'connect', 'openDeviceFiles', 'closeDeviceFiles', 'flashFirmware', 'disconnect', 'runFile', 'uploadFile', 'uploadFilesToDevice', 'uploadFolderToDevice', 'syncProject', 'stop', 'softReset', 'openRepl', 'refreshFiles', 'openDeviceFile', 'downloadFile', 'showOutput']) {
+  for (const command of ['setupTools', 'repairTools', 'connect', 'openDeviceFiles', 'repairDeviceFiles', 'closeDeviceFiles', 'flashFirmware', 'disconnect', 'runFile', 'uploadFile', 'uploadFilesToDevice', 'uploadFolderToDevice', 'syncProject', 'stop', 'softReset', 'openRepl', 'refreshFiles', 'openDeviceFile', 'downloadFile', 'showOutput']) {
     assert.ok(commands.includes(`microPal.${command}`), `Command registered: ${command}`);
   }
   assert.equal(vscode.workspace.getConfiguration('microPal').get('baudRate'), 115200);
@@ -22,7 +22,7 @@ async function smoke() {
   await vscode.commands.executeCommand('microPal.disconnect');
   await assert.rejects(vscode.workspace.fs.stat(vscode.Uri.parse('micropal://stale-session/')),
     error => error.code === 'Unavailable', 'Writable provider rejects a disconnected session');
-  console.log('MicroPal editor-host smoke tests passed (activation, 19 commands, settings, output, disconnect, filesystem registration).');
+  console.log('MicroPal editor-host smoke tests passed (activation, 20 commands, settings, output, disconnect, filesystem registration).');
 }
 
 exports.run = async function run() {

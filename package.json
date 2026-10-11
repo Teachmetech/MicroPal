@@ -91,6 +91,12 @@
         "icon": "$(close)"
       },
       {
+        "command": "microPal.repairDeviceFiles",
+        "title": "Repair ESP32 Files",
+        "category": "MicroPal",
+        "icon": "$(wrench)"
+      },
+      {
         "command": "microPal.flashFirmware",
         "title": "Flash Firmware",
         "category": "MicroPal",
@@ -193,12 +199,17 @@
     "viewsWelcome": [
       {
         "view": "microPal.files",
-        "contents": "First time using MicroPal? [Set Up Tools](command:microPal.setupTools) with Python 3.10+ installed.\nConnect an ESP32 running MicroPython to browse its files.\n[Connect](command:microPal.connect)\nInstall MicroPython on a new board with [Flash Firmware](command:microPal.flashFirmware).\nHaving tool problems? [Repair Tools](command:microPal.repairTools).",
+        "contents": "First time using MicroPal? [Set Up Tools](command:microPal.setupTools) with Python 3.10+ installed.\nConnect an ESP32 running MicroPython to browse its files.\n[Connect](command:microPal.connect)\nFolder unavailable? [Repair ESP32 Files](command:microPal.repairDeviceFiles).\nInstall MicroPython on a new board with [Flash Firmware](command:microPal.flashFirmware).\nHaving tool problems? [Repair Tools](command:microPal.repairTools).",
         "when": "!microPal.connected"
       }
     ],
     "menus": {
       "view/title": [
+        {
+          "command": "microPal.repairDeviceFiles",
+          "when": "view == microPal.files",
+          "group": "navigation@5"
+        },
         {
           "command": "microPal.flashFirmware",
           "when": "view == microPal.files",
@@ -255,6 +266,11 @@
         }
       ],
       "explorer/context": [
+        {
+          "command": "microPal.repairDeviceFiles",
+          "when": "resourceScheme == micropal && explorerResourceIsRoot",
+          "group": "microPal@0"
+        },
         {
           "command": "microPal.uploadFilesToDevice",
           "when": "resourceScheme == micropal && explorerResourceIsFolder",

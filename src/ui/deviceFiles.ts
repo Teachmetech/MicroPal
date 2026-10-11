@@ -31,7 +31,19 @@ export class DeviceFilesProvider implements vscode.TreeDataProvider<vscode.TreeI
     if (!this.manager.state.port || ['disconnected', 'reconnecting', 'connecting', 'flashing', 'error'].includes(this.manager.state.phase)) return [];
     if (item instanceof DeviceFileItem) {
       if (!item.file.isDirectory) return [];
-      return this.cache.get(item.file.path) ?? this.load(item.file.path);
+      if (item.resourceUri?.authority !== this.manager.fileSystemSession) return [];
+      const generation = this.generation;
+      const session = this.manager.fileSystemSession;
+      try { return this.cache.get(item.file.path) ?? await this.load(item.file.path); }
+      catch (error) {
+        if (generation !== this.generation || session !== this.manager.fileSystemSession) return [];
+        const repair = new vscode.TreeItem('Repair ESP32 Files');
+        repair.iconPath = new vscode.ThemeIcon('warning');
+        repair.description = 'Unable to read folder';
+        repair.tooltip = `${error instanceof Error ? error.message : String(error)}\nSelect to repair the ESP32 file connection.`;
+        repair.command = { command: 'microPal.repairDeviceFiles', title: 'Repair ESP32 Files' };
+        return [repair];
+      }
     }
     if (this.cache.has('/')) return this.cache.get('/')!;
     const hint = new vscode.TreeItem('Open ESP32 Files in Explorer');
@@ -45,14 +57,14 @@ export class DeviceFilesProvider implements vscode.TreeDataProvider<vscode.TreeI
     if (!session) return [];
     try {
       const files = await this.manager.listFiles(path, session);
-      if (generation !== this.generation) return [];
+      if (generation !== this.generation || session !== this.manager.fileSystemSession) return [];
       const items = files.sort((a, b) => Number(b.isDirectory) - Number(a.isDirectory) || a.name.localeCompare(b.name))
         .map(file => new DeviceFileItem(file, this.filesystem.toUri(file.path, session)));
       this.cache.set(path, items);
       return items;
     } catch (error) {
-      void vscode.window.showErrorMessage(`MicroPal: ${error instanceof Error ? error.message : String(error)}`);
-      return [];
+      if (generation !== this.generation || session !== this.manager.fileSystemSession) return [];
+      throw error;
     }
   }
   async refresh(): Promise<void> {

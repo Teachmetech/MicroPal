@@ -204,7 +204,7 @@ export class DeviceFileSystem implements vscode.FileSystemProvider, vscode.Dispo
   private assertActive(session: string): void {
     if (!vscode.workspace.isTrusted) throw vscode.FileSystemError.NoPermissions('Trust this workspace before accessing ESP32 files.');
     if (this.disposed || !session || session !== this.device.fileSystemSession || offlinePhases.has(this.device.state.phase)) {
-      throw vscode.FileSystemError.Unavailable('This ESP32 file belongs to a disconnected session. Reconnect with MicroPal and reopen it from ESP32 Files. Copy any unsaved edits before closing the old file.');
+      throw vscode.FileSystemError.Unavailable('This ESP32 file belongs to a disconnected session. Run MicroPal: Repair ESP32 Files, then reopen it from ESP32 Files. Copy any unsaved edits before closing the old file.');
     }
     this.useMetadataSession(session);
   }

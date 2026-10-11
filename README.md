@@ -199,6 +199,8 @@ Device editors are bound to a connection session. Explicit **Disconnect**, switc
 
 After an editor-host restart, MicroPal can restore a mounted session only when the saved USB serial identity matches the enumerated device. This check does not probe the MicroPython REPL. A board without a stable USB serial identity requires an explicit reconnect after a restart. Restored Explorer views can subsequently request filesystem data, which uses raw REPL as described below.
 
+If **ESP32 Files** shows an exclamation mark or “Unable to resolve workspace folder,” right-click its root and choose **MicroPal: Repair ESP32 Files**. The command is also in the Command Palette and MicroPal's Device Files toolbar, and startup restoration warnings include a repair button. Repair retries a saved USB identity when possible; otherwise it offers **Connect** to select a device. With an existing idle connection, it replaces the stale root and refreshes Explorer. Stop an active Run or close the REPL before repairing. A new connection keeps old device tabs bound to their original session: save any unsaved edits locally and reopen files from the repaired root.
+
 MicroPal does not poll device files in the background. Use **Refresh Device Files** for changes made by board code or another client. Native Explorer reads and writes require an idle MicroPal connection: stop **Run Current File** or close **Open REPL** first. Once idle, filesystem access enters raw REPL and can interrupt programs started independently by `boot.py` or `main.py`.
 
 Direct editor saves transfer to a hidden `.micropal-upload-*.tmp` staging file before renaming it into place. A failed transfer preserves the previous destination; cancellation or unplugging can leave the staging file for later removal. An overwrite on a filesystem that cannot replace a destination using `os.rename` fails safely instead of deleting the original. The Output channel identifies staging paths when relevant.
@@ -235,9 +237,10 @@ Open the Command Palette with **Cmd+Shift+P** on macOS or **Ctrl+Shift+P** on Wi
 | Open REPL | `microPal.openRepl` | Open an interactive mpremote REPL in a real editor terminal. |
 | Open ESP32 Files in Explorer | `microPal.openDeviceFiles` | Add or reveal the current device root below local folders. |
 | Close ESP32 Files | `microPal.closeDeviceFiles` | Remove the device root from the Explorer. |
+| Repair ESP32 Files | `microPal.repairDeviceFiles` | Restore a saved board connection or offer Connect, then remount and refresh an unavailable device root. |
 | Upload Files to ESP32… | `microPal.uploadFilesToDevice` | Pick local files to copy into a device folder. |
 | Upload Folder to ESP32… | `microPal.uploadFolderToDevice` | Pick a local folder to copy into a device folder. |
-| Refresh Device Files | `microPal.refreshFiles` | Refresh cached device listings and editor/Explorer views. |
+| Refresh Device Files | `microPal.refreshFiles` | Refresh cached device listings and editor/Explorer views; start Repair when disconnected or the mounted session is stale. |
 | Flash Firmware | `microPal.flashFirmware` | Choose official MicroPython or a local combined BIN, then confirm and flash with esptool. |
 | Show Output | `microPal.showOutput` | Reveal the MicroPal Output channel. |
 
@@ -273,6 +276,7 @@ Default sync exclusions cover `.git`, `.vscode`, `.venv`, `venv`, `__pycache__`,
 | Busy or inaccessible serial port | Run **Connect** again. On macOS/Linux, MicroPal releases its managed REPLs automatically and offers **Release Port and Connect** for other owners. If inspection is unavailable, close the conflicting serial monitor manually. |
 | Device returns under a different path | Stable USB serial identity can reconnect it automatically; devices without an identity require selection of their new path. |
 | ESP32 Files is missing from Explorer | Open a local project folder, Connect, or run **Open ESP32 Files in Explorer**. |
+| ESP32 Files has an exclamation mark or “Unable to resolve workspace folder” | Right-click the root and choose **Repair ESP32 Files**, or run that command from the Command Palette. Stop Run/close REPL first. If offered Connect, select the board; preserve unsaved old device tabs locally and reopen files from the repaired root. |
 | A device editor says its session is disconnected | Save unsaved edits locally, reconnect, and reopen the file from the current ESP32 Files root. |
 | Files cannot be accessed during Run/REPL | Stop the extension Run session or close its REPL first. Filesystem access then uses raw REPL and can interrupt other board code. |
 | No prompt or unreliable native USB reset | Check the board's USB/firmware configuration and use the manual reset/reconnect checklist. Bootloader mode is not a MicroPython REPL. |

@@ -2,6 +2,15 @@
 
 Entries record the evidence available at the time of each change. The newest section supersedes earlier statements about repository, CI, or publication availability; historical limits are retained for traceability.
 
+## ESP32 Explorer recovery — 2026-10-11
+
+- `npm run check` passed locally: TypeScript, ESLint, 503 tests across 22 suites, and the extension bundle build. Recovery regressions cover current-session remount, saved USB identity restoration, explicit Connect fallback/cancellation, active-operation refusal, duplicate repair, trust/revision changes, native reads during mounting, shortcut-tree errors, and stale response suppression. A port-picker regression failed before the fix and passed after adding revision checks, so Disconnect cannot be undone by an old selection.
+- Activation smoke checks passed in isolated VS Code 1.140.0 and Cursor (VS Code API 1.128.0) profiles, including all 20 commands, settings, Output, Disconnect, and filesystem provider registration.
+- Isolated native filesystem fixtures passed in VS Code 1.140.0 and Cursor (VS Code API 1.128.0), with three host activations, two restorations, and only two deliberate Connect probes each. They reproduced an unavailable saved root when its board was absent during activation, repaired it after the board returned without another probe, and replaced an old root after a fresh Connect. Old dirty editor contents and URIs were preserved, stale saves remained rejected, device bytes stayed unchanged, and local workspace roots remained above ESP32 Files. Existing binary operations, native Copy/Paste, transfers, editor saves, and descriptor revocation checks also passed.
+- Independent review found a pending port-selection cancellation gap, which was fixed and verified with a runtime reproducer and regression test. No remaining actionable findings were reported.
+
+These checks use a disk-backed fake board and isolated editor profiles. No physical ESP32 was accessed or flashed, and actual no-USB-identity recovery, hardware/driver behavior, and Windows/Linux editor acceptance remain on the [manual checklist](manual-testing.md). This change has not been released to either extension store or installed into the user's existing Cursor profile.
+
 ## Live output and official MicroPython downloads — 2026-10-09
 
 - Final `npm run check` passed locally: TypeScript, ESLint, 481 tests across 20 suites, and the extension bundle build. New regression coverage includes passive Connect, queue priority and verified serial handoffs, startup/cancellation/early-exit races, manual REPL and Run completion, failure suppression, console configuration, official catalogs/downloads, and flashing dialogs.

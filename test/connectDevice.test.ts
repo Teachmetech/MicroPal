@@ -89,6 +89,19 @@ describe('explicit device connection and serial recovery', () => {
     expect(onConnected).not.toHaveBeenCalled();
   });
 
+  it('does not reconnect after Disconnect while the port picker is open', async () => {
+    const { command, selectPort, connect, owners, onConnected, cancelRecovery } = await fixture();
+    let select!: (port: DevicePort) => void;
+    selectPort.mockImplementation(() => new Promise(resolve => { select = resolve; }));
+    const pending = command();
+    cancelRecovery();
+    select(board);
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    expect(connect).not.toHaveBeenCalled();
+    expect(owners.inspect).not.toHaveBeenCalled();
+    expect(onConnected).not.toHaveBeenCalled();
+  });
+
   it.each([
     new Error('Serial port permission denied.'),
     new Error('Python firmware OSError: [Errno 16] Device or resource busy'),

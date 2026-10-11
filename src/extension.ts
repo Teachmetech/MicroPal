@@ -11,6 +11,7 @@ import { SerialConsole } from './transport/serialConsole';
 import { MicroPythonFirmwareService } from './firmware/microPythonFirmware';
 import { createFirmwareFlashCommand } from './ui/flashFirmware';
 import { createConnectCommand } from './ui/connectDevice';
+import { createRepairDeviceFilesCommand } from './ui/repairDeviceFiles';
 import { createTerminalLauncher } from './ui/terminalSession';
 import { DeviceFileItem, DeviceFilesProvider } from './ui/deviceFiles';
 import { DeviceFileSystem } from './ui/deviceFileSystem';
@@ -95,8 +96,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         if (error instanceof Error && error.name === 'AbortError') return;
         const message = error instanceof Error ? error.message : String(error);
         output.appendLine(`[error] ${message}`);
-        const choice = await vscode.window.showErrorMessage(`MicroPal: ${message}`, 'Show Output');
-        if (choice) output.show(true);
+        const fileAction = ['openDeviceFiles', 'refreshFiles', 'openDeviceFile', 'downloadFile',
+          'uploadFilesToDevice', 'uploadFolderToDevice'].includes(name);
+        const choice = await vscode.window.showErrorMessage(`MicroPal: ${message}`,
+          ...(fileAction ? ['Repair ESP32 Files', 'Show Output'] : ['Show Output']));
+        if (choice === 'Show Output') output.show(true);
+        else if (choice === 'Repair ESP32 Files') await vscode.commands.executeCommand('microPal.repairDeviceFiles');
       }
     }));
   };
@@ -104,7 +109,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const portOwners = new SerialPortOwners(new NodeProcessRunner(), {
     managedToolsRoot: path.join(context.globalStorageUri.fsPath, 'tools'),
   });
-  register('connect', createConnectCommand(device, portOwners, async () => {
+  const connect = createConnectCommand(device, portOwners, async () => {
     // Load an existing console interpreter even when a custom mpremote path
     // makes setup.ensure unnecessary. This never installs or downloads tools.
     if (settings().autoShowOutput) await tools.initialize();
@@ -115,7 +120,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     files.clear();
     if (vscode.workspace.workspaceFolders?.some(folder => folder.uri.scheme === 'file')) await explorer.open();
     else void vscode.window.showInformationMessage('Connected. Open a local project folder, then run MicroPal: Open ESP32 Files in Explorer.');
-  }, output, () => vscode.workspace.getConfiguration('microPal').get<boolean>('autoReleasePort', true)));
+  }, output, () => vscode.workspace.getConfiguration('microPal').get<boolean>('autoReleasePort', true));
+  register('connect', connect);
+  const repairDeviceFiles = createRepairDeviceFilesCommand(device, explorer, connect, async () => {
+    files.clear();
+    filesystem.refresh();
+    await vscode.commands.executeCommand('workbench.files.action.refreshFilesExplorer');
+  });
+  register('repairDeviceFiles', repairDeviceFiles);
   register('openDeviceFiles', () => explorer.open());
   register('closeDeviceFiles', () => explorer.close(), []);
   register('uploadFilesToDevice', async target => {
@@ -156,6 +168,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     void vscode.window.showInformationMessage(`Uploaded ${destination}`);
   });
   register('refreshFiles', async () => {
+    const mount = vscode.workspace.workspaceFolders?.find(folder => folder.uri.scheme === 'micropal');
+    if (device.state.phase !== 'connected' || (mount && mount.uri.authority !== device.fileSystemSession)) {
+      await repairDeviceFiles();
+      return;
+    }
     filesystem.refresh();
     await files.refresh();
     await vscode.commands.executeCommand('workbench.files.action.refreshFilesExplorer');
@@ -221,7 +238,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       output.appendLine(`[filesystem] ${message}`);
-      void vscode.window.showWarningMessage(`MicroPal: ${message}`);
+      void vscode.window.showWarningMessage(`MicroPal: ${message}`, 'Repair ESP32 Files').then(choice => {
+        if (choice === 'Repair ESP32 Files') void vscode.commands.executeCommand('microPal.repairDeviceFiles');
+      });
     }
   }
   context.subscriptions.push(vscode.workspace.registerFileSystemProvider('micropal', filesystem, { isCaseSensitive: true }));
