@@ -12,6 +12,7 @@ All changes intended for public delivery are recorded here. Release automation p
 - Added cancellable catalog and download progress, bounded HTTPS requests to official MicroPython paths, atomic private download storage, combined-image header/chip checks, and source/local SHA-256 records. These checks identify malformed or wrong-family downloads; the local hash is not an upstream signature or published checksum.
 - Added console lifecycle, cancellation, serial handoff and firmware parser/download/wizard regression coverage, plus an implementation plan and editor-host checks for the new setting.
 - Added **Repair ESP32 Files** to the Command Palette, device toolbar, native ESP32 root context menu, disconnected welcome view, startup restoration warnings, and file-command errors. It retries a saved USB identity or offers the existing explicit Connect workflow, then remounts the current root and refreshes Explorer. Run/REPL and transient connection/flash states must finish before repair; unsaved old device tabs retain their original session and must be preserved locally if a new connection is required.
+- Added `npm run package:local` to rebuild and create a unique next-patch `-local` VSIX for Cursor/VS Code testing after each change. The packaged version is overridden in memory; tracked manifest/lockfile versions, publisher identity, tags, and production release packaging remain unchanged. Local prerelease packages are not store releases. Added real packaging regressions for fresh bundle inclusion, unique artifacts, unchanged source versions, and standard packaging compatibility.
 
 ### Changed
 
@@ -20,6 +21,7 @@ All changes intended for public delivery are recorded here. Release automation p
 - Updated the README, architecture, status-bar guidance, and manual acceptance checklist for live output, serial handoffs, managed-tool requirements, official firmware downloads, and remaining hardware verification limits. Native Explorer filesystem requests still enter raw REPL and may interrupt code started independently on the board; automatic output does not restart that code.
 - Anchored the local firmware-artifact ignore rule to the repository root so the firmware service source is tracked. No dependencies, publisher identity, or public version were changed.
 - Documented Explorer repair, stale-session handling, recovery acceptance cases, and verification evidence in the README and architecture/manual-testing/verification guides; added unit and isolated editor-host recovery regressions while retaining hardware verification as a separate requirement.
+- Required agents and contributors to produce and link a local test VSIX after each completed change; updated source-install and release documentation with local versioning, installation, and artifact-handling instructions. Generated packages remain ignored and are never installed automatically.
 
 ### Fixed
 

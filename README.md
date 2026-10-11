@@ -95,10 +95,10 @@ git clone https://github.com/Teachmetech/MicroPal.git
 cd MicroPal
 npm ci
 npm run check
-npm run package
+npm run package:local
 ```
 
-`check` runs TypeScript checking, linting, tests, and the bundle build. `package` creates a versioned `micropal-*.vsix` in the repository root. In VS Code or Cursor, run **Extensions: Install from VSIX…** and select that file. Then run **Developer: Reload Window** and confirm the installed version and logo in the extension's details. Settings use the `microPal.*` prefix.
+`check` runs TypeScript checking, linting, tests, and the bundle build. `package:local` rebuilds and creates a uniquely versioned `micropal-*-local.*.vsix` in the repository root, without changing the source version or publishing. The local version is a prerelease of the next patch (for example, `0.3.1-local.…` from source `0.3.0`), so it updates the previous stable copy and a future stable release can replace it. In VS Code or Cursor, run **Extensions: Install from VSIX…** and select that file. Then run **Developer: Reload Window** and confirm the installed version and logo in the extension's details. Settings use the `microPal.*` prefix. Public release automation uses its own immutable release package.
 
 ### Update or migrate an installed copy
 

@@ -55,6 +55,7 @@
     "check": "npm run typecheck && npm run lint && npm test && npm run build",
     "vscode:prepublish": "npm run build",
     "package": "node scripts/package.mjs",
+    "package:local": "node scripts/package.mjs --local",
     "test:host": "npm run build && node scripts/test-host.mjs",
     "test:tools": "node scripts/test-tools.mjs",
     "test:filesystem:host": "node scripts/test-filesystem-host.mjs",

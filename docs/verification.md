@@ -2,6 +2,12 @@
 
 Entries record the evidence available at the time of each change. The newest section supersedes earlier statements about repository, CI, or publication availability; historical limits are retained for traceability.
 
+## Local test VSIX delivery — 2026-10-11
+
+- `npm run check` passed locally: TypeScript, ESLint, 505 tests across 23 suites, and the bundle build. Two new tests invoke the actual packaging CLI against disposable source fixtures, verifying unique local versions, fresh prepublish build output, unchanged source manifest/lockfile, preservation of earlier test packages, and normal manifest-version packaging compatibility. The local-version assertion failed before the implementation and passed afterward.
+- Independent packaging review confirmed VSCE's in-memory version override, next-patch prerelease ordering, unchanged publisher/release behavior, and portable temporary dependency-link cleanup. Agents now provide a local test VSIX after each completed change; public release versions remain owned by automation. Actual editor installation and physical-board testing are separate actions.
+- `npm run package:local` produced a 1,512,814-byte test VSIX. Archive inspection verified the unique `teachmetech.micropal` local version, all 20 commands including file repair, the logo, exact equality with the freshly built extension bundle, and exclusion of source/tests/tooling/private artifacts. Tracked manifest and lockfile versions remain `0.3.0`; the VSIX is ignored by Git. No extension was installed automatically.
+
 ## ESP32 Explorer recovery — 2026-10-11
 
 - `npm run check` passed locally: TypeScript, ESLint, 503 tests across 22 suites, and the extension bundle build. Recovery regressions cover current-session remount, saved USB identity restoration, explicit Connect fallback/cancellation, active-operation refusal, duplicate repair, trust/revision changes, native reads during mounting, shortcut-tree errors, and stale response suppression. A port-picker regression failed before the fix and passed after adding revision checks, so Disconnect cannot be undone by an old selection.
