@@ -9,6 +9,7 @@ export function readSettings(managed?: ManagedToolPaths): DeviceSettings {
     preferredPort: config.get<string>('preferredPort', ''),
     baudRate: config.get<number>('baudRate', 115200),
     autoReconnect: config.get<boolean>('autoReconnect', true),
+    autoShowOutput: config.get<boolean>('autoShowOutput', true),
     syncExclusions: config.get<string[]>('syncExclusions', []),
   };
 }

@@ -55,6 +55,7 @@
     "check": "npm run typecheck && npm run lint && npm test && npm run build",
     "vscode:prepublish": "npm run build",
     "package": "node scripts/package.mjs",
+    "package:local": "node scripts/package.mjs --local",
     "test:host": "npm run build && node scripts/test-host.mjs",
     "test:tools": "node scripts/test-tools.mjs",
     "test:filesystem:host": "node scripts/test-filesystem-host.mjs",
@@ -89,6 +90,12 @@
         "title": "Close ESP32 Files",
         "category": "MicroPal",
         "icon": "$(close)"
+      },
+      {
+        "command": "microPal.repairDeviceFiles",
+        "title": "Repair ESP32 Files",
+        "category": "MicroPal",
+        "icon": "$(wrench)"
       },
       {
         "command": "microPal.flashFirmware",
@@ -193,12 +200,17 @@
     "viewsWelcome": [
       {
         "view": "microPal.files",
-        "contents": "First time using MicroPal? [Set Up Tools](command:microPal.setupTools) with Python 3.10+ installed.\nConnect an ESP32 running MicroPython to browse its files.\n[Connect](command:microPal.connect)\nInstall MicroPython on a new board with [Flash Firmware](command:microPal.flashFirmware).\nHaving tool problems? [Repair Tools](command:microPal.repairTools).",
+        "contents": "First time using MicroPal? [Set Up Tools](command:microPal.setupTools) with Python 3.10+ installed.\nConnect an ESP32 running MicroPython to browse its files.\n[Connect](command:microPal.connect)\nFolder unavailable? [Repair ESP32 Files](command:microPal.repairDeviceFiles).\nInstall MicroPython on a new board with [Flash Firmware](command:microPal.flashFirmware).\nHaving tool problems? [Repair Tools](command:microPal.repairTools).",
         "when": "!microPal.connected"
       }
     ],
     "menus": {
       "view/title": [
+        {
+          "command": "microPal.repairDeviceFiles",
+          "when": "view == microPal.files",
+          "group": "navigation@5"
+        },
         {
           "command": "microPal.flashFirmware",
           "when": "view == microPal.files",
@@ -255,6 +267,11 @@
         }
       ],
       "explorer/context": [
+        {
+          "command": "microPal.repairDeviceFiles",
+          "when": "resourceScheme == micropal && explorerResourceIsRoot",
+          "group": "microPal@0"
+        },
         {
           "command": "microPal.uploadFilesToDevice",
           "when": "resourceScheme == micropal && explorerResourceIsFolder",
@@ -314,6 +331,12 @@
           "type": "boolean",
           "default": true,
           "description": "Rediscover the selected device after a disconnect or reset. Never reruns user code."
+        },
+        "microPal.autoShowOutput": {
+          "type": "boolean",
+          "default": true,
+          "scope": "machine",
+          "description": "Show live ESP32 serial output in the MicroPal Output panel while connected. Requires managed tools. The read-only console releases the port for MicroPal commands and resumes afterward; disable it to leave the idle port free for other applications."
         },
         "microPal.autoReleasePort": {
           "type": "boolean",

@@ -36,7 +36,7 @@ __pycache__/
 *.hex
 *.log
 logs/
-firmware/
+/firmware/
 serial-captures/
 
 # Editor and OS state

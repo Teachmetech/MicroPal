@@ -11,6 +11,7 @@ export interface DeviceSettings {
   preferredPort: string;
   baudRate: number;
   autoReconnect: boolean;
+  autoShowOutput?: boolean;
   syncExclusions: string[];
 }
 export type ConnectionPhase = 'disconnected' | 'connecting' | 'connected' | 'busy' | 'running' | 'repl' | 'flashing' | 'reconnecting' | 'error';
@@ -65,4 +66,7 @@ export interface DeviceTransport {
   renameFile(port: DevicePort, oldPath: string, newPath: string, options: { overwrite: boolean }, signal?: AbortSignal): Promise<void>;
   downloadFile(port: DevicePort, remotePath: string, localPath: string, signal?: AbortSignal): Promise<void>;
   openRepl(port: DevicePort): Promise<InteractiveSession>;
+  /** Resolves after a passive serial reader is ready; rejection must follow confirmed process closure. */
+  openConsole?(port: DevicePort, signal?: AbortSignal): Promise<InteractiveSession>;
+  canOpenConsole?(): boolean;
 }

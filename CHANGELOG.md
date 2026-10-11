@@ -4,6 +4,32 @@ All changes intended for public delivery are recorded here. Release automation p
 
 ## [Unreleased]
 
+### Added
+
+- Show a live ESP32 console automatically after Connect in the MicroPal Output panel. A passive reader uses the managed Python environment and never sends REPL commands, requests a reset, or replays user code. Connect uses reader readiness when available; custom mpremote installations without managed tools retain the existing connection probe and explain how to enable live output. The serial library may discard buffered bytes on open, and USB drivers can toggle control lines; output from before attachment or between owners is not recovered.
+- Added default-on, machine-scoped `microPal.autoShowOutput`. Turning it off releases the idle serial port for other applications; turning it on can start the reader for the current connection. A failed reader is reported once and requires an explicit Connect or setting change to retry.
+- Added official MicroPython firmware selection and download directly inside **Flash Firmware**: choose ESP32/ESP32-S3, a supported flash/PSRAM variant, and a stable release, with the latest stable version first. Official combined images use their known chip-specific flash address; local BIN selection and address overrides remain available.
+- Added cancellable catalog and download progress, bounded HTTPS requests to official MicroPython paths, atomic private download storage, combined-image header/chip checks, and source/local SHA-256 records. These checks identify malformed or wrong-family downloads; the local hash is not an upstream signature or published checksum.
+- Added console lifecycle, cancellation, serial handoff and firmware parser/download/wizard regression coverage, plus an implementation plan and editor-host checks for the new setting.
+- Added **Repair ESP32 Files** to the Command Palette, device toolbar, native ESP32 root context menu, disconnected welcome view, startup restoration warnings, and file-command errors. It retries a saved USB identity or offers the existing explicit Connect workflow, then remounts the current root and refreshes Explorer. Run/REPL and transient connection/flash states must finish before repair; unsaved old device tabs retain their original session and must be preserved locally if a new connection is required.
+- Added `npm run package:local` to rebuild and create a unique next-patch `-local` VSIX for Cursor/VS Code testing after each change. The packaged version is overridden in memory; tracked manifest/lockfile versions, publisher identity, tags, and production release packaging remain unchanged. Local prerelease packages are not store releases. Added real packaging regressions for fresh bundle inclusion, unique artifacts, unchanged source versions, and standard packaging compatibility.
+
+### Changed
+
+- Idle live output now owns the serial port. File operations, uploads, Run, REPL, Stop, reset, tool setup, flashing, and Disconnect wait for the console process to close before taking ownership; the console resumes when foreground work is finished and the same connection remains valid. Run continues streaming its own output and the interactive REPL keeps its real terminal.
+- Firmware dialogs retain explicit erase-mode and final destructive confirmation before acquiring the serial port. Catalog lookup and downloads can be cancelled without flashing, and workspace trust is checked again before hardware writes.
+- Updated the README, architecture, status-bar guidance, and manual acceptance checklist for live output, serial handoffs, managed-tool requirements, official firmware downloads, and remaining hardware verification limits. Native Explorer filesystem requests still enter raw REPL and may interrupt code started independently on the board; automatic output does not restart that code.
+- Anchored the local firmware-artifact ignore rule to the repository root so the firmware service source is tracked. No dependencies, publisher identity, or public version were changed.
+- Documented Explorer repair, stale-session handling, recovery acceptance cases, and verification evidence in the README and architecture/manual-testing/verification guides; added unit and isolated editor-host recovery regressions while retaining hardware verification as a separate requirement.
+- Required agents and contributors to produce and link a local test VSIX after each completed change; updated source-install and release documentation with local versioning, installation, and artifact-handling instructions. Generated packages remain ignored and are never installed automatically.
+
+### Fixed
+
+- Recover an ESP32 root left unavailable after a board was absent at editor startup, after reconnecting with a new session, or when a board without USB serial identity cannot restore its old mount. Recovery remains an explicit action and does not silently reuse stale document identities or replay failed operations.
+- Route **Refresh Device Files** through repair when disconnected or when the mounted root belongs to an older session, instead of silently refreshing an unusable root. Disconnected-session errors now point to the repair command.
+- Propagate shortcut-tree Refresh failures to the command error handler and show a clickable repair row for failed subfolder expansion, instead of presenting an empty successful listing or repeated expansion toasts. Discard late results and failures from old connection sessions.
+- Cancel a pending Connect port selection when Disconnect or another connection-changing action occurs, including Connect opened by file repair; an old picker can no longer reopen a connection after explicit cancellation.
+
 ## 0.3.0 (2026-10-10)
 
 ## [0.3.0](https://github.com/Teachmetech/MicroPal/compare/v0.2.1...v0.3.0) (2026-10-10)

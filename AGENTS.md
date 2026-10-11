@@ -16,6 +16,7 @@ Every agent working in this repository must read this file before editing. It ap
 
 - Keep serial ownership, cancellation, and state transitions in `DeviceManager`; subprocess argument/lifecycle handling in transport; editor APIs in UI modules. Read `docs/architecture.md` before changing these boundaries.
 - Reproduce meaningful behavior changes with tests. Run `npm run check` and the release checks relevant to the change. Record exactly what passed and what was not tested; hardware and OS compatibility require their own evidence.
+- After each completed change, run `npm run package:local` and provide a clickable absolute path to the resulting VSIX so the user can test in Cursor/VS Code. Package the final source after validation and inspect the packaged manifest/bundle. Use the unique local version produced by this command; do not bump tracked public versions, replace a published artifact, commit VSIX files, or install into the user's editor without a request.
 - Preserve literal executable/argument arrays, session-bound device URIs, staged writes, workspace trust checks, no automatic replay after reconnection, and explicit confirmation for firmware flashing and external-process termination.
 - Managed tool installation requires an explicit setup/repair action. Never install globally, download on activation, add telemetry, or silently flash hardware.
 - Never commit secrets, local Python environments, firmware dumps, private device data, generated VSIX packages, or serial logs. Review `.gitignore` and the staged diff before pushing.

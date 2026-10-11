@@ -67,9 +67,11 @@ export function createConnectCommand(
     let unsubscribe: (() => void) | undefined;
     try {
       assertTrusted();
+      const selectionRevision = device.connectionRevision;
       const port = await selectPort();
       if (!port) return;
       assertTrusted();
+      if (device.connectionRevision !== selectionRevision) throw cancelled();
       let attemptRevision = device.connectionRevision;
       try {
         // The manager releases its tracked Run/REPL before acquiring the port.

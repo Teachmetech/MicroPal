@@ -6,6 +6,7 @@ import { DeviceManager } from '../../src/core/deviceManager';
 import { DeviceFileSystem } from '../../src/ui/deviceFileSystem';
 import { DeviceExplorer } from '../../src/ui/deviceExplorer';
 import { DeviceSessionPersistence } from '../../src/ui/deviceSessionPersistence';
+import { createRepairDeviceFilesCommand } from '../../src/ui/repairDeviceFiles';
 import { FakeTransport, fakePort } from './fakeTransport';
 
 interface State { phase: 'mounting' | 'reloading' | 'finished'; session: string; activations: number; restores: number; }
@@ -35,7 +36,7 @@ async function nativeCopy(source: vscode.Uri, targetFolder: vscode.Uri, expected
     `Native Explorer copy did not create ${expected.toString()}`);
 }
 async function verify(context: vscode.ExtensionContext, filesystem: DeviceFileSystem, manager: DeviceManager,
-  observer: DeviceSessionPersistence, transport: FakeTransport, saved: State): Promise<void> {
+  observer: DeviceSessionPersistence, transport: FakeTransport, saved: State, repair: () => Promise<void>): Promise<void> {
   const folders = vscode.workspace.workspaceFolders!;
   assert.equal(folders.length, 2); assert.equal(folders[0]!.uri.scheme, 'file');
   assert.equal(folders[1]!.name, 'ESP32 Files'); assert.equal(folders[1]!.uri.scheme, 'micropal');
@@ -114,6 +115,21 @@ async function verify(context: vscode.ExtensionContext, filesystem: DeviceFileSy
   await assert.rejects(async () => await new DeviceExplorer(context, manager, filesystem).restore(),
     { code: 'Unavailable' });
   step('Explicit disconnect revokes the durable session descriptor; a fresh Explorer cannot restore it.');
+  await assert.rejects(async () => await fs.stat(root), { code: 'Unavailable' });
+  const currentSession = manager.fileSystemSession!;
+  await repair();
+  await until(() => vscode.workspace.workspaceFolders?.at(-1)?.uri.authority === currentSession,
+    'Repair did not replace the disconnected native ESP32 Files root');
+  const repairedFolders = vscode.workspace.workspaceFolders!;
+  assert.equal(repairedFolders.length, 2);
+  assert.equal(repairedFolders[0]!.uri.toString(), folders[0]!.uri.toString());
+  assert.equal(repairedFolders[1]!.name, 'ESP32 Files');
+  const repairedFile = vscode.Uri.joinPath(repairedFolders[1]!.uri, 'edit.py');
+  assert.deepEqual(Buffer.from(await fs.readFile(repairedFile)), Buffer.from(savedBytes));
+  assert.equal(document.uri.toString(), editable.toString(), 'Repair must not retarget an old editor to the new board session');
+  assert.equal(document.getText(), '# unsaved\nprint("saved from editor")\n');
+  assert.equal(document.isDirty, true, 'Repair preserves the old editor and its unsaved contents');
+  step('Repair replaces the unavailable native ESP32 root with the current session, preserving the local root and dirty old editor.');
   let rejected = false;
   try { rejected = !await document.save(); }
   catch (error) { rejected = /session|connect|unavailable/i.test(String(error)); }
@@ -158,6 +174,12 @@ async function run(context: vscode.ExtensionContext): Promise<void> {
   const filesystem = new DeviceFileSystem(manager);
   context.subscriptions.push(filesystem, vscode.workspace.registerFileSystemProvider('micropal', filesystem, { isCaseSensitive: true }));
   const explorer = new DeviceExplorer(context, manager, filesystem);
+  const repair = createRepairDeviceFilesCommand(manager, explorer,
+    async () => { throw new Error('Repair must not probe or select another board when the verified saved or current session is available.'); },
+    async () => {
+      filesystem.refresh();
+      await vscode.commands.executeCommand('workbench.files.action.refreshFilesExplorer');
+    });
   let state: State | undefined = existsSync(statePath) ? JSON.parse(readFileSync(statePath, 'utf8')) as State : undefined;
   if (state?.phase === 'finished') return;
   const activations = (state?.activations ?? 0) + 1;
@@ -171,7 +193,21 @@ async function run(context: vscode.ExtensionContext): Promise<void> {
     await explorer.open();
   } else {
     state.activations = activations;
-    await explorer.restore(); state.restores++;
+    if (state.phase === 'reloading') {
+      transport.setPresent(false);
+      await assert.rejects(async () => await explorer.restore(), { code: 'Unavailable' });
+      const unavailableRoot = vscode.workspace.workspaceFolders?.find(folder => folder.uri.scheme === 'micropal')?.uri;
+      assert.ok(unavailableRoot, 'The saved ESP32 root remains mounted when its board is initially absent');
+      await assert.rejects(async () => await vscode.workspace.fs.stat(unavailableRoot), { code: 'Unavailable' });
+      step('A saved native ESP32 root is unavailable when its verified USB board is absent during editor activation.');
+      transport.setPresent(true);
+      await repair();
+      assert.equal((await vscode.workspace.fs.stat(unavailableRoot)).type, vscode.FileType.Directory);
+      step('Repair restores the returned verified USB board without another Connect probe or changing its session.');
+    } else {
+      await explorer.restore();
+    }
+    state.restores++;
     assert.equal(manager.fileSystemSession, state.session);
     writeFileSync(statePath, JSON.stringify(state));
     step(`Fresh extension host activation ${activations} restored the saved USB identity without probing.`);
@@ -188,7 +224,7 @@ async function run(context: vscode.ExtensionContext): Promise<void> {
     void vscode.commands.executeCommand('workbench.action.reloadWindow').then(undefined, () => {});
     return;
   }
-  await verify(context, filesystem, manager, observer, transport, state);
+  await verify(context, filesystem, manager, observer, transport, state, repair);
   state.phase = 'finished'; writeFileSync(statePath, JSON.stringify(state));
   const { discoveries, probes } = JSON.parse(readFileSync(join(dirname(reportPath), 'fake-device.json'), 'utf8')) as { discoveries: number; probes: number };
   assert.equal(probes, 2, 'Only two deliberate connects probe the fake board; restoration does not');

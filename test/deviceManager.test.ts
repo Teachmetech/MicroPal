@@ -34,6 +34,8 @@ function transportDouble() {
     renameFile: vi.fn<DeviceTransport['renameFile']>().mockResolvedValue(undefined),
     downloadFile: vi.fn<DeviceTransport['downloadFile']>().mockResolvedValue(undefined),
     openRepl: vi.fn<DeviceTransport['openRepl']>(),
+    openConsole: vi.fn<NonNullable<DeviceTransport['openConsole']>>(),
+    canOpenConsole: vi.fn<NonNullable<DeviceTransport['canOpenConsole']>>().mockReturnValue(true),
   };
 }
 const managers: DeviceManager[] = [];
@@ -52,6 +54,184 @@ afterEach(async () => {
 });
 
 describe('DeviceManager', () => {
+  function consoleSession() {
+    const ended = deferred<void>();
+    return { ended, session: { closed: ended.promise, close: vi.fn(async () => { ended.resolve(); }), show: vi.fn() } };
+  }
+
+  it('connects with a passive console instead of interrupting the board with a REPL probe', async () => {
+    const { manager, transport } = fixture({ autoShowOutput: true });
+    const { session } = consoleSession();
+    transport.openConsole.mockResolvedValue(session);
+    await manager.connect(board);
+    expect(transport.probe).not.toHaveBeenCalled();
+    expect(transport.openConsole).toHaveBeenCalledWith(board, expect.any(AbortSignal));
+    expect(session.show).toHaveBeenCalledOnce();
+    expect(manager.state.phase).toBe('connected');
+  });
+
+  it('keeps the automatic output notice when the ready reader exits during Connect', async () => {
+    const { manager, transport } = fixture({ autoShowOutput: true });
+    transport.openConsole.mockResolvedValue({ closed: Promise.resolve(), close: async () => {}, show: () => {} });
+    await manager.connect(board);
+    expect(manager.state).toMatchObject({ phase: 'connected', message: expect.stringMatching(/automatic output.*stopped/i) });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(transport.openConsole).toHaveBeenCalledOnce();
+  });
+
+  it('does not report Connect success if a ready reader cannot verify closure', async () => {
+    const { manager, transport } = fixture({ autoShowOutput: true });
+    transport.openConsole.mockResolvedValue({ closed: Promise.reject(new Error('Closure could not be confirmed')), close: async () => {}, show: () => {} });
+    await expect(manager.connect(board)).rejects.toThrow(/closure could not be confirmed/i);
+    expect(manager.state.phase).toBe('error');
+    expect(manager.state.message).toMatch(/closure could not be confirmed/i);
+    expect(manager.fileSystemSession).toBeUndefined();
+  });
+
+  it('releases the ready console if revealing its output panel fails during Connect', async () => {
+    const { manager, transport } = fixture({ autoShowOutput: true });
+    const { session } = consoleSession(); session.show.mockImplementation(() => { throw new Error('Output panel failed'); });
+    transport.openConsole.mockResolvedValue(session);
+    await expect(manager.connect(board)).rejects.toThrow(/output panel failed/i);
+    expect(session.close).toHaveBeenCalledOnce();
+    expect(manager.state.phase).toBe('error');
+  });
+
+  it('resumes the passive console after Run completes without replaying the program', async () => {
+    const { manager, transport } = fixture({ autoShowOutput: true });
+    const initial = consoleSession();
+    transport.openConsole.mockResolvedValueOnce(initial.session).mockImplementation(async () => consoleSession().session);
+    const program = deferred<void>(); transport.runFile.mockReturnValue(program.promise);
+    await manager.connect(board);
+    const running = manager.runFile('/main.py'); await settle();
+    expect(initial.session.close).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(500);
+    expect(transport.openConsole).toHaveBeenCalledOnce();
+    program.resolve(); await running; await vi.advanceTimersByTimeAsync(100);
+    expect(transport.openConsole).toHaveBeenCalledTimes(2);
+    expect(transport.runFile).toHaveBeenCalledOnce();
+    expect(transport.softReset).not.toHaveBeenCalled();
+  });
+
+  it('cancels an idle console startup before queued filesystem work acquires the port', async () => {
+    const { manager, transport } = fixture({ autoShowOutput: true });
+    const initial = consoleSession(); const opening = deferred<InteractiveSession>();
+    let signal: AbortSignal | undefined;
+    transport.openConsole.mockResolvedValueOnce(initial.session).mockImplementation((_port, pendingSignal) => { signal = pendingSignal; return opening.promise; });
+    await manager.connect(board); await manager.listFiles('/');
+    await vi.advanceTimersByTimeAsync(100);
+    const reading = manager.readFile('/main.py'); await settle();
+    expect(signal?.aborted).toBe(true);
+    expect(transport.readFile).not.toHaveBeenCalled();
+    const late = consoleSession(); opening.resolve(late.session);
+    await reading;
+    expect(late.session.close).toHaveBeenCalledOnce();
+    expect(transport.readFile).toHaveBeenCalledOnce();
+  });
+
+  it('waits for console closure before filesystem work and resumes only after a quiet queue', async () => {
+    const { manager, transport } = fixture({ autoShowOutput: true });
+    const first = consoleSession();
+    const released = deferred<void>();
+    first.session.close.mockImplementation(async () => { await released.promise; first.ended.resolve(); });
+    transport.openConsole.mockResolvedValueOnce(first.session).mockImplementation(async () => consoleSession().session);
+    await manager.connect(board);
+    const reading = manager.listFiles('/');
+    await settle();
+    expect(transport.listFiles).not.toHaveBeenCalled();
+    released.resolve(); await reading;
+    await manager.readFile('/main.py');
+    expect(transport.openConsole).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(100);
+    expect(transport.openConsole).toHaveBeenCalledTimes(2);
+    expect(transport.runFile).not.toHaveBeenCalled();
+    expect(transport.softReset).not.toHaveBeenCalled();
+  });
+
+  it('cancels a pending console launch on disconnect and closes its late session', async () => {
+    const { manager, transport } = fixture({ autoShowOutput: true });
+    const opening = deferred<InteractiveSession>();
+    let signal: AbortSignal | undefined;
+    transport.openConsole.mockImplementation((_port, pendingSignal) => { signal = pendingSignal; return opening.promise; });
+    const connecting = manager.connect(board).catch(error => error);
+    await settle();
+    const disconnected = manager.disconnect();
+    expect(signal?.aborted).toBe(true);
+    const { session } = consoleSession(); opening.resolve(session);
+    await disconnected;
+    expect((await connecting).name).toBe('AbortError');
+    expect(session.close).toHaveBeenCalledOnce();
+    expect(manager.state.phase).toBe('disconnected');
+    await vi.advanceTimersByTimeAsync(500);
+    expect(transport.openConsole).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains the closure guard when the automatic console cannot be released', async () => {
+    const { manager, transport } = fixture({ autoShowOutput: true });
+    const { session } = consoleSession();
+    session.close.mockRejectedValueOnce(new Error('serial handle still open'));
+    transport.openConsole.mockResolvedValue(session);
+    await manager.connect(board);
+    await expect(manager.listFiles('/')).rejects.toThrow(/still open/);
+    expect(transport.listFiles).not.toHaveBeenCalled();
+    await manager.listFiles('/');
+    expect(transport.listFiles).toHaveBeenCalledOnce();
+  });
+
+  it('pauses the console for manual REPL and resumes after the terminal closes', async () => {
+    const { manager, transport } = fixture({ autoShowOutput: true });
+    const initial = consoleSession();
+    transport.openConsole.mockResolvedValueOnce(initial.session).mockImplementation(async () => consoleSession().session);
+    const repl = consoleSession(); transport.openRepl.mockResolvedValue(repl.session);
+    await manager.connect(board);
+    await manager.openRepl();
+    expect(initial.session.close).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(500);
+    expect(transport.openConsole).toHaveBeenCalledTimes(1);
+    await expect(manager.listFiles('/')).rejects.toThrow(/close.*REPL/);
+    repl.ended.resolve(); await settle();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(transport.openConsole).toHaveBeenCalledTimes(2);
+  });
+
+  it('stops a failed console without retrying during ordinary presence polling', async () => {
+    const { manager, transport } = fixture({ autoShowOutput: true });
+    const initial = consoleSession(); transport.openConsole.mockResolvedValue(initial.session);
+    await manager.connect(board);
+    initial.ended.resolve(); await settle();
+    manager.start(); await vi.advanceTimersByTimeAsync(500);
+    expect(transport.openConsole).toHaveBeenCalledTimes(1);
+    expect(manager.state.phase).toBe('connected');
+    expect(manager.state.message).toMatch(/automatic output.*stopped/i);
+    transport.openConsole.mockImplementation(async () => consoleSession().session);
+    await manager.refreshOutput(); await vi.advanceTimersByTimeAsync(100);
+    expect(transport.openConsole).toHaveBeenCalledTimes(2);
+  });
+
+  it('falls back to ordinary Connect with one setup notice when managed console tools are unavailable', async () => {
+    const { manager, transport } = fixture({ autoShowOutput: true });
+    transport.canOpenConsole.mockReturnValue(false);
+    const notices: string[] = [];
+    manager.onDidChange(state => { if (state.message?.includes('Set Up Tools')) notices.push(state.message); });
+    await manager.connect(board);
+    await manager.listFiles('/'); manager.start(); await vi.advanceTimersByTimeAsync(500);
+    expect(transport.probe).toHaveBeenCalledOnce();
+    expect(transport.openConsole).not.toHaveBeenCalled();
+    expect(notices).toHaveLength(1);
+  });
+
+  it('disables live output immediately on a settings refresh', async () => {
+    const options = { autoShowOutput: true };
+    const { manager, transport } = fixture(options);
+    const { session } = consoleSession(); transport.openConsole.mockResolvedValue(session);
+    await manager.connect(board);
+    options.autoShowOutput = false;
+    await manager.refreshOutput(); await vi.advanceTimersByTimeAsync(500);
+    expect(session.close).toHaveBeenCalledOnce();
+    expect(transport.openConsole).toHaveBeenCalledTimes(1);
+    expect(manager.state.phase).toBe('connected');
+  });
+
   it('binds device documents to a connection session that is replaced by explicit reconnect', async () => {
     const { manager } = fixture();
     expect(manager.fileSystemSession).toBeUndefined();

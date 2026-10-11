@@ -6,7 +6,7 @@ import type { DeviceFile, DeviceFileStat, DevicePort, DeviceTransport, DeviceWri
 export const fakePort: DevicePort = { path: '/dev/micropal-fake-usb', serialNumber: 'MICROPAL-HOST-FIXTURE',
   vendorId: '303a', productId: '1001', likelyEsp32: true, description: 'Hardware-free ESP32 fixture' };
 
-type Store = { files: Record<string, string | null>; discoveries: number; probes: number };
+type Store = { files: Record<string, string | null>; discoveries: number; probes: number; present?: boolean };
 
 /** Serial replacement only: all production manager/provider/explorer code remains real. */
 export class FakeTransport implements DeviceTransport {
@@ -18,6 +18,7 @@ export class FakeTransport implements DeviceTransport {
     this.persist();
   }
   private persist(): void { writeFileSync(this.file, JSON.stringify(this.store)); }
+  setPresent(present: boolean): void { this.store.present = present; this.persist(); }
   private entry(path: string): string | null {
     const entry = this.store.files[path];
     if (entry === undefined) throw new DeviceFileSystemError('FileNotFound', path);
@@ -26,7 +27,10 @@ export class FakeTransport implements DeviceTransport {
   private directory(path: string): void {
     if (this.entry(path) !== null) throw new DeviceFileSystemError('FileNotADirectory', path);
   }
-  async discover(): Promise<DevicePort[]> { this.store.discoveries++; this.persist(); return [{ ...fakePort }]; }
+  async discover(): Promise<DevicePort[]> {
+    this.store.discoveries++; this.persist();
+    return this.store.present === false ? [] : [{ ...fakePort }];
+  }
   async probe(): Promise<void> { this.store.probes++; this.persist(); }
   async runFile(): Promise<void> { throw new Error('The filesystem host fixture never runs programs.'); }
   async stop(): Promise<void> {}

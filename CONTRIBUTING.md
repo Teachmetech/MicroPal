@@ -11,10 +11,10 @@ git clone https://github.com/Teachmetech/MicroPal.git
 cd MicroPal
 npm ci
 npm run check
-npm run package
+npm run package:local
 ```
 
-`npm run check` runs TypeScript checking, ESLint, unit/process/transport tests, and the bundle build. `npm run package` creates a versioned `micropal-*.vsix`; install it with **Extensions: Install from VSIX…** in VS Code or a compatible Cursor release. Run **Developer: Reload Window** after an update. `npm run watch` rebuilds after source edits; reload the extension host to exercise the new bundle.
+`npm run check` runs TypeScript checking, ESLint, unit/process/transport tests, and the bundle build. After each completed change, run `npm run package:local` and share the resulting `micropal-*-local.*.vsix` with the user. Each local build gets a unique next-patch prerelease version without editing the tracked manifest/lockfile or creating Git tags. Install it with **Extensions: Install from VSIX…** in VS Code or a compatible Cursor release, then run **Developer: Reload Window**. `npm run watch` rebuilds after source edits; reload the extension host to exercise the new bundle.
 
 For device development, install Python 3.10+ with `venv` and `ensurepip`, open a trusted local project folder, and run **MicroPal: Set Up Tools** as described in the [README](README.md). External mpremote/esptool executable overrides remain available. The [examples](examples/README.md) provide small starting programs.
 
@@ -29,7 +29,7 @@ Choose checks that exercise the changed behavior. Add regression coverage for be
 | Native filesystem fixture | `npm run test:filesystem:host -- code` or `npm run test:filesystem:host -- cursor` | Isolated editor profile and disk-backed fake board; native file operations, editors, mounting, and session restoration. |
 | Managed tool installation | `npm run test:tools` | Real pinned-tool download into temporary storage, version checks, reuse, and cancelled repair. Requires Python and internet access. |
 | Native serial-owner recovery | `npm run test:port-release` | Disposable local PTY owners and process inspection/termination; no ESP32 access. |
-| VSIX packaging | `npm run package` | Build and archive creation; inspect its contents before release. |
+| Local VSIX packaging | `npm run package:local` | Rebuild, create a unique local test archive, and inspect its contents; never commit the VSIX. |
 
 On Windows, supply the absolute path to `Code.exe` or `Cursor.exe` for editor tests, not a `.cmd` shim. Record exact editor and runtime versions with results. Editor fixtures do not validate physical serial access or interactive REPL behavior. The serial-owner integration is platform dependent; do not describe an unrun platform as verified.
 
